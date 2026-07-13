@@ -22,14 +22,19 @@ struct RegisterPage {
 
     this.loading = true;
     this.message = '';
-    const result = await this.viewModel.register(context, this.username, this.password, this.confirmPassword,
-      this.nickname);
-    this.loading = false;
-    if (!result.success) {
-      this.message = result.message;
-      return;
+    try {
+      const result = await this.viewModel.register(context, this.username, this.password, this.confirmPassword,
+        this.nickname);
+      this.loading = false;
+      if (!result.success) {
+        this.message = result.message;
+        return;
+      }
+      this.replacePage(AppRoutes.HOME);
+    } catch (error) {
+      this.loading = false;
+      this.message = '注册请求异常，请重试';
     }
-    this.replacePage(AppRoutes.HOME);
   }
 
   private replacePage(route: string): void {
@@ -126,11 +131,17 @@ struct RegisterPage {
           })
 
         if (this.message.length > 0) {
-          Text(this.message)
-            .fontSize(14)
-            .fontColor($r('app.color.error'))
-            .width('100%')
-            .margin({ top: 12 })
+          Row({ space: 8 }) {
+            Text(this.message)
+              .fontSize(14)
+              .fontColor($r('app.color.error'))
+              .layoutWeight(1)
+          }
+          .width('100%')
+          .padding(14)
+          .margin({ top: 12 })
+          .borderRadius(10)
+          .backgroundColor('#FFF0F0')
         }
 
         Button(this.loading ? '注册中…' : '注册并进入植忆')

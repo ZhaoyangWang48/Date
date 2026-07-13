@@ -1,5 +1,6 @@
 import { Context } from '@kit.AbilityKit';
 import { preferences } from '@kit.ArkData';
+import { http } from '@kit.NetworkKit';
 import { ApiConfig } from '../constants/ApiConfig';
 
 export class ServerEndpointStorage {
@@ -26,6 +27,59 @@ export class ServerEndpointStorage {
       ApiConfig.setBaseUrl(ApiConfig.DEFAULT_BASE_URL);
       return ApiConfig.DEFAULT_BASE_URL;
     }
+  }
+
+  static async probeEndpoint(url: string): Promise<boolean> {
+    const request = http.createHttp();
+    try {
+      await request.request(url, {
+        method: http.RequestMethod.GET,
+        connectTimeout: 1500,
+        readTimeout: 1500,
+      });
+      return true;
+    } catch (_error) {
+      return false;
+    } finally {
+      request.destroy();
+    }
+  }
+
+  static async probeAndSelect(context: Context): Promise<string> {
+    // 1. 先尝试已保存的地址
+    let saved = '';
+    try {
+      const store = await preferences.getPreferences(context, ServerEndpointStorage.STORE_NAME);
+      const raw = await store.get(ServerEndpointStorage.BASE_URL_KEY, '') as string;
+      saved = ServerEndpointStorage.normalize(raw);
+    } catch (_error) { /* ignore */ }
+
+    if (saved.length > 0) {
+      const live = await ServerEndpointStorage.probeEndpoint(saved);
+      if (live) {
+        ApiConfig.setBaseUrl(saved);
+        return saved;
+      }
+    }
+
+    // 2. 依次探测候选地址
+    for (const url of ApiConfig.CANDIDATE_URLS) {
+      const live = await ServerEndpointStorage.probeEndpoint(url);
+      if (live) {
+        ApiConfig.setBaseUrl(url);
+        // 保存成功的地址以便下次优先使用
+        try {
+          const store = await preferences.getPreferences(context, ServerEndpointStorage.STORE_NAME);
+          await store.put(ServerEndpointStorage.BASE_URL_KEY, url);
+          await store.flush();
+        } catch (_error) { /* ignore */ }
+        return url;
+      }
+    }
+
+    // 3. 全部失败，使用默认地址
+    ApiConfig.setBaseUrl(ApiConfig.DEFAULT_BASE_URL);
+    return '';
   }
 
   static async save(context: Context, value: string): Promise<string> {

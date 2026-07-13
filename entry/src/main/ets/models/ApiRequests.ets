@@ -32,3 +32,9 @@ export class JoinTreeHoleRequestBody {
   inviteCode: string = '';
   constructor(inviteCode: string) { this.inviteCode = inviteCode; }
 }
+
+export class AgentChatRequestBody {
+  treeHoleId: number = 0;
+  question: string = '';
+  constructor(treeHoleId: number, question: string) { this.treeHoleId = treeHoleId; this.question = question; }
+}

@@ -1,3 +1,5 @@
+import { BusinessError } from '@kit.BasicServicesKit';
+import { AppRoutes } from '../constants/AppRoutes';
 import { MoodTypes } from '../constants/MoodTypes';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
 import { TokenStorage } from '../services/TokenStorage';
@@ -113,6 +115,14 @@ struct MemoryDetailPage {
                 .height(260)
                 .objectFit(ImageFit.Cover)
                 .borderRadius(20)
+                .onClick(() => {
+                  try {
+                    this.getUIContext().getRouter().pushUrl({
+                      url: AppRoutes.IMAGE_VIEW,
+                      params: { imageUrl: this.imageUrl }
+                    }, (_error: BusinessError) => {});
+                  } catch (e) { /* ignore */ }
+                })
             }
             if (this.authorId === this.currentUserId) {
               Button('删除这段记忆')

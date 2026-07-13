@@ -9,6 +9,11 @@ export class UploadRepository {
   private readonly uploadFileService: UploadFileService = new UploadFileService();
 
   async uploadImage(context: Context, localUri: string): Promise<ApiResult<string>> {
+    return this.uploadWithOptions(context, localUri, false, 0, 0, 0, 0);
+  }
+
+  async uploadWithOptions(context: Context, localUri: string, optimize: boolean,
+    cropX: number, cropY: number, cropW: number, cropH: number): Promise<ApiResult<string>> {
     if (localUri.length === 0) {
       return new ApiResult<string>(400, '未选择图片');
     }
@@ -38,7 +43,8 @@ export class UploadRepository {
 
     let result: ApiResult<ImageUploadData> = new ApiResult<ImageUploadData>(0, '图片上传未完成');
     try {
-      result = await this.http.uploadImageFile(preparedPath, token, preparedContentType, preparedFileName);
+      result = await this.http.uploadImageFile(preparedPath, token, preparedContentType, preparedFileName,
+        optimize, cropX, cropY, cropW, cropH);
     } catch (uploadError) {
       const message: string = (uploadError as Error).message;
       return new ApiResult<string>(0,

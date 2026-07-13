@@ -1,9 +1,11 @@
 import { BusinessError } from '@kit.BasicServicesKit';
+import { promptAction } from '@kit.ArkUI';
 import { AppRoutes } from '../constants/AppRoutes';
 import { GardenBottomBar } from '../components/GardenBottomBar';
 import { VineTreeCanvas } from '../components/VineTreeCanvas';
 import { Memory } from '../models/Memory';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
+import { RecallCardViewModel } from '../viewmodels/RecallCardViewModel';
 import { TokenStorage } from '../services/TokenStorage';
 
 @Entry
@@ -12,15 +14,49 @@ struct MainTabPage {
   @State selectedIndex: number = 0;
   @State memories: Memory[] = [];
   @State seed: number = 1;
+  @State hasRecallCards: boolean = false;
+  @State recallCardCount: number = 0;
+  @State generating: boolean = false;
+  @State btnOffsetX: number = 0;
+  @State btnOffsetY: number = 0;
   private readonly memoryVm: MemoryViewModel = new MemoryViewModel();
+  private readonly recallVm: RecallCardViewModel = new RecallCardViewModel();
 
-  aboutToAppear(): void { this.load(); }
+  aboutToAppear(): void { this.load(); this.checkRecallCards(); }
 
   private async load(): Promise<void> {
     const context = this.getUIContext().getHostContext();
     if (context === undefined) return;
     this.seed = await TokenStorage.getUserId(context);
     this.memories = await this.memoryVm.listMemories(context);
+  }
+
+  private async checkRecallCards(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) return;
+      const cards = await this.recallVm.list(context);
+      this.hasRecallCards = cards.length > 0;
+      this.recallCardCount = cards.length;
+    } catch (error) { /* ignore */ }
+  }
+
+  private async onGenerateRecall(): Promise<void> {
+    if (this.generating) return;
+    this.generating = true;
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) return;
+      const result = await this.recallVm.generate(context);
+      promptAction.showToast({ message: result.message });
+      if (result.success) {
+        this.hasRecallCards = true;
+        this.recallCardCount = this.recallCardCount + 1;
+      }
+    } catch (error) {
+      promptAction.showToast({ message: '总结生成失败，请稍后再试' });
+    }
+    this.generating = false;
   }
 
   private open(route: string): void {
@@ -101,27 +137,64 @@ struct MainTabPage {
 
   @Builder
   private treeContent(): void {
-    Scroll() {
-      Column({ space: 14 }) {
-        this.topBar('记忆树', false)
-        Text('每条记录都会成为一个可回看的节点。').fontSize(14).fontColor($r('app.color.text_secondary')).width('100%')
-        if (this.memories.length === 0) {
-          Column({ space: 8 }) {
-            Image($r('app.media.empty_memory_illustration')).width(170).height(170).objectFit(ImageFit.Contain)
-            Text('还没有记忆').fontSize(17).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary'))
-            Button('新建记忆').fontSize(15).fontColor($r('app.color.on_primary')).backgroundColor($r('app.color.primary'))
-              .borderRadius(14).margin({ top: 4 }).onClick(() => { this.open(AppRoutes.ADD_MEMORY); })
+    Stack() {
+      Scroll() {
+        Column({ space: 14 }) {
+          this.topBar('记忆树', false)
+          Text('每条记录都会成为一个可回看的节点。').fontSize(14).fontColor($r('app.color.text_secondary')).width('100%')
+          if (this.memories.length === 0) {
+            Column({ space: 8 }) {
+              Image($r('app.media.empty_memory_illustration')).width(170).height(170).objectFit(ImageFit.Contain)
+              Text('还没有记忆').fontSize(17).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary'))
+              Button('新建记忆').fontSize(15).fontColor($r('app.color.on_primary')).backgroundColor($r('app.color.primary'))
+                .borderRadius(14).margin({ top: 4 }).onClick(() => { this.open(AppRoutes.ADD_MEMORY); })
+            }
+            .width('100%').padding(24).borderRadius(20).backgroundColor($r('app.color.surface'))
+          } else {
+            VineTreeCanvas({
+              memories: this.memories,
+              seed: this.seed,
+              hasRecallCards: this.hasRecallCards,
+              onLeafSelected: (id: number) => { this.openDetail(id); },
+              onRecallCardSelected: () => { this.open(AppRoutes.RECALL_CARD_LIST); }
+            })
+            Text(`${this.memories.length} 条记忆 · 点击叶片查看详情`).fontSize(13).fontColor($r('app.color.text_secondary'))
           }
-          .width('100%').padding(24).borderRadius(20).backgroundColor($r('app.color.surface'))
+        }
+        .alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Start).width('100%')
+        .padding({ left: 20, right: 20, top: 12, bottom: 96 })
+      }
+      .align(Alignment.Top).width('100%').height('100%').scrollBar(BarState.Off).backgroundColor($r('app.color.app_background'))
+
+      // 浮动按钮 — 拖动 + 点击
+      Column() {
+        if (this.generating) {
+          LoadingProgress().width(12).height(12).color(Color.White)
         } else {
-          VineTreeCanvas({ memories: this.memories, seed: this.seed, onLeafSelected: (id: number) => { this.openDetail(id); } })
-          Text(`${this.memories.length} 条记忆 · 点击叶片查看详情`).fontSize(13).fontColor($r('app.color.text_secondary'))
+          Text('✦').fontSize(13).fontColor(Color.White)
         }
       }
-      .alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.Start).width('100%')
-      .padding({ left: 20, right: 20, top: 12, bottom: 96 })
+      .width(26).height(26)
+      .borderRadius(13)
+      .backgroundColor('#4CAF50')
+      .justifyContent(FlexAlign.Center)
+      .alignItems(HorizontalAlign.Center)
+      .shadow({ radius: 4, color: '#4CAF5080', offsetY: 1 })
+      .position({ x: 10, y: 25 })
+      .offset({ x: this.btnOffsetX, y: this.btnOffsetY })
+      .gesture(
+        GestureGroup(GestureMode.Parallel,
+          TapGesture({ count: 1 })
+            .onAction(() => { this.onGenerateRecall(); }),
+          PanGesture({ fingers: 1, distance: 5 })
+            .onActionUpdate((event: GestureEvent) => {
+              this.btnOffsetX = this.btnOffsetX + event.offsetX;
+              this.btnOffsetY = this.btnOffsetY + event.offsetY;
+            })
+        )
+      )
     }
-    .align(Alignment.Top).width('100%').height('100%').scrollBar(BarState.Off).backgroundColor($r('app.color.app_background'))
+    .width('100%').height('100%')
   }
 
   build() {
