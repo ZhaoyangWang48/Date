@@ -1,5 +1,6 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { AppRoutes } from '../constants/AppRoutes';
+import { ApiConfig } from '../constants/ApiConfig';
 import { AuthViewModel } from '../viewmodels/AuthViewModel';
 
 @Entry
@@ -9,7 +10,12 @@ struct LoginPage {
   @State password: string = '';
   @State message: string = '';
   @State loading: boolean = false;
+  @State serverUrl: string = ApiConfig.BASE_URL;
   private readonly viewModel: AuthViewModel = new AuthViewModel();
+
+  aboutToAppear(): void {
+    this.serverUrl = ApiConfig.BASE_URL;
+  }
 
   private async submit(): Promise<void> {
     const context = this.getUIContext().getHostContext();
@@ -18,15 +24,25 @@ struct LoginPage {
       return;
     }
 
-    this.loading = true;
-    this.message = '';
-    const result = await this.viewModel.login(context, this.username, this.password);
-    this.loading = false;
-    if (!result.success) {
-      this.message = result.message;
+    if (this.username.trim().length === 0 || this.password.length === 0) {
+      this.message = '请输入用户名和密码';
       return;
     }
-    this.replacePage(AppRoutes.HOME);
+
+    this.loading = true;
+    this.message = '';
+    try {
+      const result = await this.viewModel.login(context, this.username, this.password);
+      this.loading = false;
+      if (!result.success) {
+        this.message = result.message;
+        return;
+      }
+      this.replacePage(AppRoutes.HOME);
+    } catch (error) {
+      this.loading = false;
+      this.message = '登录请求异常，请重试';
+    }
   }
 
   private replacePage(route: string): void {
@@ -102,11 +118,17 @@ struct LoginPage {
           })
 
         if (this.message.length > 0) {
-          Text(this.message)
-            .fontSize(14)
-            .fontColor($r('app.color.error'))
-            .width('100%')
-            .margin({ top: 12 })
+          Row({ space: 8 }) {
+            Text(this.message)
+              .fontSize(14)
+              .fontColor($r('app.color.error'))
+              .layoutWeight(1)
+          }
+          .width('100%')
+          .padding(14)
+          .margin({ top: 12 })
+          .borderRadius(10)
+          .backgroundColor('#FFF0F0')
         }
 
         Button(this.loading ? '登录中…' : '登录')
@@ -116,7 +138,7 @@ struct LoginPage {
           .margin({ top: 24 })
           .fontSize(17)
           .fontColor($r('app.color.on_primary'))
-          .backgroundColor($r('app.color.primary'))
+          .backgroundColor(this.loading ? $r('app.color.text_secondary') : $r('app.color.primary'))
           .borderRadius(18)
           .onClick(() => {
             this.submit();
@@ -140,6 +162,18 @@ struct LoginPage {
             })
         }
         .margin({ top: 24 })
+
+        Row({ space: 6 }) {
+          Text('服务器')
+            .fontSize(11)
+            .fontColor($r('app.color.text_secondary'))
+          Text(this.serverUrl)
+            .fontSize(11)
+            .fontColor($r('app.color.primary'))
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .margin({ top: 36 })
       }
       .alignItems(HorizontalAlign.Start)
       .width('100%')

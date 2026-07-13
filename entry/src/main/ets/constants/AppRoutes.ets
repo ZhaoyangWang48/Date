@@ -1,4 +1,5 @@
 export class AppRoutes {
+  static readonly SPLASH: string = 'pages/SplashPage';
   static readonly HOME: string = 'pages/MainTabPage';
   static readonly LOGIN: string = 'pages/LoginPage';
   static readonly REGISTER: string = 'pages/RegisterPage';
@@ -10,4 +11,10 @@ export class AppRoutes {
   static readonly SHARED_TREE: string = 'pages/SharedTreePage';
   static readonly MINE: string = 'pages/MinePage';
   static readonly TOOLBOX: string = 'pages/ToolboxPage';
+  static readonly RECALL_CARD_LIST: string = 'pages/RecallCardListPage';
+  static readonly RECALL_CARD_DETAIL: string = 'pages/RecallCardDetailPage';
+  static readonly IMAGE_EDIT: string = 'pages/ImageEditPage';
+  static readonly CROP: string = 'pages/CropPage';
+  static readonly ENHANCE: string = 'pages/EnhancePage';
+  static readonly IMAGE_VIEW: string = 'pages/ImageViewPage';
 }

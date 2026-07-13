@@ -1,5 +1,6 @@
 {
   "src": [
+    "pages/SplashPage",
     "pages/LoginPage",
     "pages/RegisterPage",
     "pages/HomePage",
@@ -11,6 +12,12 @@
     "pages/CommonDayPage",
     "pages/SharedTreePage",
     "pages/MinePage",
-    "pages/ToolboxPage"
+    "pages/ToolboxPage",
+    "pages/RecallCardListPage",
+    "pages/RecallCardDetailPage",
+    "pages/ImageEditPage",
+    "pages/CropPage",
+    "pages/EnhancePage",
+    "pages/ImageViewPage"
   ]
 }

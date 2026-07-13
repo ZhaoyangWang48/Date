@@ -30,6 +30,27 @@ public class FileStorageService {
     }
     catch (IOException error) { throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "图片保存失败"); }
   }
+  public String store(byte[] bytes, String originalName) throws IOException {
+    Files.createDirectories(root);
+    String ext = ".jpg";
+    if (originalName != null) {
+      String lower = originalName.toLowerCase();
+      if (lower.endsWith(".png")) ext = ".png";
+      else if (lower.endsWith(".webp")) ext = ".webp";
+    }
+    String name = UUID.randomUUID() + ext;
+    Files.write(root.resolve(name), bytes);
+    return "/uploads/" + name;
+  }
+
+  public byte[] read(String imageUrl) throws IOException {
+    if (imageUrl == null || !imageUrl.startsWith("/uploads/"))
+      throw new IOException("无效的图片地址");
+    Path file = root.resolve(imageUrl.substring("/uploads/".length())).normalize();
+    if (!file.startsWith(root)) throw new IOException("无效的图片地址");
+    return Files.readAllBytes(file);
+  }
+
   public void delete(String imageUrl) {
     if (imageUrl == null || !imageUrl.startsWith("/uploads/")) return;
     Path candidate = root.resolve(imageUrl.substring("/uploads/".length())).normalize();
