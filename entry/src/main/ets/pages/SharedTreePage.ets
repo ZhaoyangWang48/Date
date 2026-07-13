@@ -9,6 +9,14 @@ import { ImagePickerService } from '../services/ImagePickerService';
 import { TokenStorage } from '../services/TokenStorage';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
 import { TreeHoleViewModel } from '../viewmodels/TreeHoleViewModel';
+import { AgentViewModel } from '../viewmodels/AgentViewModel';
+import { AgentChatResponse, AgentSourceCitation } from '../models/AgentChat';
+
+interface ChatMessage {
+  role: string;
+  content: string;
+  sources?: AgentSourceCitation[];
+}
 
 @Entry
 @Component
@@ -31,9 +39,15 @@ struct SharedTreePage {
   @State publishing: boolean = false;
   @State errorMessage: string = '';
   @State currentUserId: number = 0;
+  @State showChat: boolean = false;
+  @State chatQuestion: string = '';
+  @State chatMessages: ChatMessage[] = [];
+  @State chatLoading: boolean = false;
+  @State expandedSourceIndex: number = -1;
   private readonly treeVm: TreeHoleViewModel = new TreeHoleViewModel();
   private readonly memoryVm: MemoryViewModel = new MemoryViewModel();
   private readonly picker: ImagePickerService = new ImagePickerService();
+  private readonly agentVm: AgentViewModel = new AgentViewModel();
 
   aboutToAppear(): void {
     this.initialize();
@@ -159,9 +173,31 @@ struct SharedTreePage {
     }
   }
 
+  private async sendQuestion(): Promise<void> {
+    if (this.chatQuestion.trim().length === 0 || this.chatLoading) return;
+    const question = this.chatQuestion.trim();
+    this.chatQuestion = '';
+    this.chatMessages = this.chatMessages.concat([{ role: 'user', content: question }]);
+    this.chatLoading = true;
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) throw new Error('context missing');
+      const resp = await this.agentVm.chat(context, this.selectedId, question);
+      if (resp === undefined) {
+        this.chatMessages = this.chatMessages.concat([{ role: 'agent', content: 'Rememberer 暂时无法回应，请稍后重试' }]);
+      } else {
+        this.chatMessages = this.chatMessages.concat([{ role: 'agent', content: resp.answer, sources: resp.sources }]);
+      }
+    } catch (_error) {
+      this.chatMessages = this.chatMessages.concat([{ role: 'agent', content: '网络请求失败，请检查连接后重试' }]);
+    }
+    this.chatLoading = false;
+  }
+
   build() {
-    Scroll() {
-      Column({ space: 0 }) {
+    Stack() {
+      Scroll() {
+        Column({ space: 0 }) {
         if (this.selectedId === 0) {
           Text('树洞')
             .fontSize(28)
@@ -261,13 +297,21 @@ struct SharedTreePage {
             .margin({ top: 5 })
             .width('100%')
 
-          Button('共同一天')
-            .fontSize(14)
-            .fontColor($r('app.color.primary'))
-            .backgroundColor($r('app.color.primary_soft'))
-            .borderRadius(16)
-            .margin({ top: 14 })
-            .onClick(() => { this.openCommonDay(); })
+          Row({ space: 8 }) {
+            Button('共同一天')
+              .fontSize(14)
+              .fontColor($r('app.color.primary'))
+              .backgroundColor($r('app.color.primary_soft'))
+              .borderRadius(16)
+              .onClick(() => { this.openCommonDay(); })
+            Button('💬 记忆守护者')
+              .fontSize(14)
+              .fontColor('#FFFFFF')
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(16)
+              .onClick(() => { this.showChat = true; })
+          }
+          .margin({ top: 14 })
 
           if (this.loading) {
             StatePanel({ title: '正在打开树洞', description: '成员和共享记忆正在加载。', stateIcon: '⏳' })
@@ -385,5 +429,109 @@ struct SharedTreePage {
     .height('100%')
     .scrollBar(BarState.Off)
     .backgroundColor($r('app.color.app_background'))
+
+      if (this.showChat) {
+        Column() {
+          Row() {
+            Text('记忆守护者 Rememberer').fontSize(17).fontWeight(FontWeight.Medium)
+              .fontColor($r('app.color.text_primary'))
+            Blank()
+            Text('✕').fontSize(22).fontColor($r('app.color.text_secondary'))
+              .onClick(() => { this.showChat = false; this.chatMessages = []; this.expandedSourceIndex = -1; })
+          }
+          .width('100%').padding(16)
+
+          Scroll() {
+            Column({ space: 12 }) {
+              ForEach(this.chatMessages, (msg: ChatMessage, index: number) => {
+                Column() {
+                  if (msg.role === 'agent') {
+                    Row() {
+                      Text('💬').fontSize(14)
+                      Text('Rememberer').fontSize(12).fontColor($r('app.color.text_secondary'))
+                    }.margin({ bottom: 4 })
+                  }
+                  Text(msg.content).fontSize(14)
+                    .fontColor(msg.role === 'agent' ? $r('app.color.text_primary') : '#FFFFFF')
+                    .padding(12).borderRadius(14)
+                    .backgroundColor(msg.role === 'agent' ? '#F5F5F5' : $r('app.color.primary'))
+                    .constraintSize({ maxWidth: '85%' })
+                    .textAlign(msg.role === 'agent' ? TextAlign.Start : TextAlign.End)
+                  if (msg.role === 'agent' && msg.sources !== undefined && msg.sources.length > 0) {
+                    Column() {
+                      if (this.expandedSourceIndex === index) {
+                        Row() {
+                          Text('📎').fontSize(11)
+                          Text(`引用 ${msg.sources!.length} 条记忆 ▲`).fontSize(11)
+                            .fontColor($r('app.color.primary'))
+                        }
+                        .padding({ top: 4, bottom: 4, left: 8, right: 8 })
+                        .borderRadius(8).backgroundColor('#E8F5E9')
+                        .onClick(() => { this.expandedSourceIndex = -1; })
+                        Column({ space: 4 }) {
+                          ForEach(msg.sources!, (src: AgentSourceCitation) => {
+                            Column() {
+                              Text(`${src.authorName} · ${src.date}`)
+                                .fontSize(10).fontColor($r('app.color.primary'))
+                              Text(src.contentSnippet)
+                                .fontSize(12).fontColor($r('app.color.text_primary'))
+                            }
+                            .padding(8).borderRadius(6)
+                            .backgroundColor('#00000006').width('100%')
+                            .alignItems(HorizontalAlign.Start)
+                          })
+                        }
+                        .margin({ top: 4 })
+                      } else {
+                        Row() {
+                          Text('📎').fontSize(11)
+                          Text(`引用 ${msg.sources!.length} 条记忆 ▼`).fontSize(11)
+                            .fontColor($r('app.color.primary'))
+                        }
+                        .padding({ top: 4, bottom: 4, left: 8, right: 8 })
+                        .borderRadius(8).backgroundColor('#E8F5E9')
+                        .onClick(() => { this.expandedSourceIndex = index; })
+                      }
+                    }
+                    .margin({ top: 6 })
+                    .alignItems(HorizontalAlign.Start)
+                  }
+                }
+                .width('100%')
+                .alignItems(msg.role === 'agent' ? HorizontalAlign.Start : HorizontalAlign.End)
+              }, (_msg: ChatMessage, index: number) => index.toString())
+
+              if (this.chatLoading) {
+                Row() {
+                  Text('⏳ 思考中...').fontSize(13).fontColor($r('app.color.text_secondary'))
+                }.margin({ left: 16 })
+              }
+            }
+            .width('100%').padding({ left: 16, right: 16 })
+            .alignItems(HorizontalAlign.Start)
+          }
+          .layoutWeight(1).scrollBar(BarState.Off)
+
+          Row({ space: 8 }) {
+            TextArea({ placeholder: '向记忆守护者提问...', text: this.chatQuestion })
+              .layoutWeight(1).height(44).padding(10)
+              .backgroundColor($r('app.color.surface'))
+              .borderRadius(22).border({ width: 1, color: $r('app.color.outline') })
+              .onChange((value: string) => { this.chatQuestion = value; })
+            Button('发送').fontSize(13).fontColor($r('app.color.on_primary'))
+              .backgroundColor($r('app.color.primary'))
+              .borderRadius(22).height(44).padding({ left: 16, right: 16 })
+              .enabled(!this.chatLoading)
+              .onClick(() => { this.sendQuestion(); })
+          }
+          .width('100%').padding(12)
+        }
+        .width('100%').height('100%')
+        .backgroundColor($r('app.color.app_background'))
+        .zIndex(200)
+      }
+    }
+    .width('100%')
+    .height('100%')
   }
 }

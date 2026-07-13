@@ -1,3 +1,4 @@
+
 spring:
   application:
     name: zhiyi-server
@@ -27,6 +28,11 @@ zhiyi:
     upload-dir: ${ZHIYI_UPLOAD_DIR:${user.dir}/uploads}
   demo:
     seed-enabled: ${ZHIYI_DEMO_SEED_ENABLED:true}
+  ai:
+    api-key: ${ZHIYI_AI_API_KEY:REMOVED_SECRET016b1cdcb8}
+    base-url: ${ZHIYI_AI_BASE_URL:https://api.deepseek.com}
+    embedding-model: ${ZHIYI_AI_EMBEDDING_MODEL:}
+    chat-model: ${ZHIYI_AI_CHAT_MODEL:deepseek-v4-flash}
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
