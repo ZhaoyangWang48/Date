@@ -1,4 +1,5 @@
 import { BusinessError } from '@kit.BasicServicesKit';
+import { Context } from '@kit.AbilityKit';
 import { AppRoutes } from '../constants/AppRoutes';
 import { MoodSelector } from '../components/MoodSelector';
 import { ImagePickerService } from '../services/ImagePickerService';
@@ -25,7 +26,7 @@ struct AddMemoryPage {
     this.loading = true;
     this.message = '';
     try {
-      const context = this.getUIContext().getHostContext();
+      const context = getContext(this) as Context;
       if (context === undefined) {
         this.message = '暂时无法提交，请重试';
         return;
