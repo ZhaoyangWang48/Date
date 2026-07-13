@@ -3,6 +3,14 @@ import { http } from '@kit.NetworkKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { ApiConfig } from '../constants/ApiConfig';
 
+const HARD_TIMEOUT_MS = 10000;
+
+interface ApiResponseJson {
+  code: number;
+  message: string;
+  data: Object;
+}
+
 export class ImageUploadData {
   imageUrl: string = '';
 }
@@ -35,14 +43,20 @@ export class HttpClient {
     fileName: string
   ): Promise<ApiResult<ImageUploadData>> {
     const url: string = this.url(ApiConfig.IMAGE_UPLOAD);
-    const startTs: number = Date.now();
-    const request: http.HttpRequest = http.createHttp();
-    try {
-      console.info(`[HttpClient] upload START url=${url} file=${fileName} type=${contentType}`);
-      const response: http.HttpResponse = await request.request(url, {
+    const httpReq: http.HttpRequest = http.createHttp();
+    return new Promise<ApiResult<ImageUploadData>>((resolve: (value: ApiResult<ImageUploadData>) => void) => {
+      let settled: boolean = false;
+
+      const timer: number = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          httpReq.destroy();
+          resolve(new ApiResult<ImageUploadData>(0, '上传超时，请检查服务器地址或网络'));
+        }
+      }, 30000);
+
+      httpReq.request(url, {
         method: http.RequestMethod.POST,
-        // NetStack 的默认 Content-Type 是 application/json。只有精确设为
-        // multipart/form-data 时，multiFormDataList 才会生效并由 SDK 生成 boundary。
         header: this.multipartHeaders(token),
         multiFormDataList: [{
           name: 'file',
@@ -51,59 +65,102 @@ export class HttpClient {
           filePath: localPath
         }],
         usingCache: false,
-        connectTimeout: 10000,
-        readTimeout: 60000
+        connectTimeout: 5000,
+        readTimeout: 30000
+      }).then((response: http.HttpResponse) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(this.parse<ImageUploadData>(response.result, response.responseCode));
+        }
+      }).catch((error: BusinessError) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          const code: number = error.code;
+          if (code === 2300028) {
+            resolve(new ApiResult<ImageUploadData>(0,
+              `图片上传超时（${code}），当前服务器为 ${ApiConfig.BASE_URL}`));
+            return;
+          }
+          if (code === 2300001 || code === 2300998) {
+            resolve(new ApiResult<ImageUploadData>(0,
+              `无法连接 ${ApiConfig.BASE_URL}（${code}），请检查工具箱中的服务器地址`));
+            return;
+          }
+          if (code === 2300025 || code === 2300026) {
+            resolve(new ApiResult<ImageUploadData>(0, `上传缓存文件不可读（${code}），请重新选择照片`));
+            return;
+          }
+          resolve(new ApiResult<ImageUploadData>(0,
+            `图片上传失败（网络错误 ${code}），请重试`));
+        }
       });
-
-      const elapsed: number = Date.now() - startTs;
-      console.info(`[HttpClient] upload DONE code=${response.responseCode} elapsed=${elapsed}ms`);
-      return this.parse<ImageUploadData>(response.result, response.responseCode);
-    } catch (error) {
-      const code: number = (error as BusinessError).code;
-      console.error(`[HttpClient] upload ERROR code=${code}`);
-      if (code === 2300028) {
-        return new ApiResult<ImageUploadData>(0,
-          `图片上传超时（${code}），当前服务器为 ${ApiConfig.BASE_URL}`);
-      }
-      if (code === 2300001 || code === 2300998) {
-        return new ApiResult<ImageUploadData>(0,
-          `无法连接 ${ApiConfig.BASE_URL}（${code}），请检查工具箱中的服务器地址`);
-      }
-      if (code === 2300025 || code === 2300026) {
-        return new ApiResult<ImageUploadData>(0, `上传缓存文件不可读（${code}），请重新选择照片`);
-      }
-      return new ApiResult<ImageUploadData>(0,
-        `图片上传失败（网络错误 ${code}），请重试`);
-    } finally {
-      request.destroy();
-    }
+    });
   }
 
-  private async request<T>(
+  private request<T>(
     path: string,
     method: http.RequestMethod,
     body: Object | undefined,
     token: string
   ): Promise<ApiResult<T>> {
-    const request: http.HttpRequest = http.createHttp();
-    try {
-      const response: http.HttpResponse = await request.request(this.url(path), {
+    const httpReq: http.HttpRequest = http.createHttp();
+    const fullUrl: string = this.url(path);
+
+    return new Promise<ApiResult<T>>((resolve: (value: ApiResult<T>) => void) => {
+      let settled: boolean = false;
+
+      // 硬超时：10 秒内必须有结果，不依赖底层 TCP 栈的超时行为
+      const timer: number = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          httpReq.destroy();
+          resolve(new ApiResult<T>(0, '连接超时，请检查服务器地址或网络'));
+        }
+      }, HARD_TIMEOUT_MS);
+
+      console.info(`[HttpClient] REQUEST ${method} ${fullUrl}`);
+      httpReq.request(fullUrl, {
         method: method,
         header: this.jsonHeaders(token),
         extraData: body === undefined ? undefined : JSON.stringify(body),
         connectTimeout: 5000,
         readTimeout: 10000
+      }).then((response: http.HttpResponse) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          console.info(`[HttpClient] RESPONSE ${response.responseCode}`);
+          // 显式处理 4xx/5xx HTTP 状态码
+          if (response.responseCode >= 400) {
+            const body = HttpClient.parseBody(response.result);
+            const msg: string = body && body.length > 0 ? body : '服务器返回错误';
+            resolve(new ApiResult<T>(response.responseCode, msg));
+            return;
+          }
+          resolve(this.parse<T>(response.result, response.responseCode));
+        }
+      }).catch((error: BusinessError) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          console.error(`[HttpClient] ERROR code=${error.code} msg=${error.message}`);
+          // HTTP 错误响应可能走 catch，尝试从 error 中提取消息
+          const msg: string = HttpClient.extractErrorBody(error);
+          if (msg.length > 0) {
+            resolve(new ApiResult<T>(0, msg));
+            return;
+          }
+          const code: number = error.code;
+          if (code === 2300001 || code === 2300998 || code === 2300028) {
+            resolve(new ApiResult<T>(0, '无法连接到服务器，请检查手机与后端是否在同一 Wi-Fi'));
+            return;
+          }
+          resolve(new ApiResult<T>(0, `网络请求失败（${code !== undefined ? code : '未知'}）`));
+        }
       });
-      return this.parse<T>(response.result, response.responseCode);
-    } catch (error) {
-      const code: number = (error as BusinessError).code;
-      if (code === 2300001 || code === 2300998 || code === 2300028) {
-        return new ApiResult<T>(0, '无法连接到服务器，请检查手机与后端是否在同一 Wi-Fi');
-      }
-      return new ApiResult<T>(0, `网络请求失败（${code !== undefined ? code : '未知'}）`);
-    } finally {
-      request.destroy();
-    }
+    });
   }
 
   private jsonHeaders(token: string): Record<string, string> {
@@ -122,14 +179,35 @@ export class HttpClient {
     return h;
   }
 
+  private static parseBody(raw: string | Object): string {
+    try {
+      const text: string = typeof raw === 'string' ? raw : JSON.stringify(raw);
+      const obj: ApiResponseJson = JSON.parse(text) as ApiResponseJson;
+      return obj.message;
+    } catch (e) {
+      // not JSON
+    }
+    return '';
+  }
+
+  private static extractErrorBody(error: BusinessError): string {
+    try {
+      const msg: string = error.message;
+      if (msg.length > 0 && msg.startsWith('{')) {
+        const obj: ApiResponseJson = JSON.parse(msg) as ApiResponseJson;
+        return obj.message;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return '';
+  }
+
   private parse<T>(raw: string | Object, responseCode: number): ApiResult<T> {
     try {
       const text: string = typeof raw === 'string' ? raw : JSON.stringify(raw);
-      const result: ApiResult<T> = JSON.parse(text) as ApiResult<T>;
-      if (result.code === undefined) {
-        return new ApiResult<T>(responseCode, '服务器返回格式不正确');
-      }
-      return result;
+      const obj: ApiResponseJson = JSON.parse(text) as ApiResponseJson;
+      return new ApiResult<T>(obj.code, obj.message, obj.data as T);
     } catch (e) {
       return new ApiResult<T>(responseCode, responseCode >= 500 ? '服务器处理失败' : '服务器返回格式不正确');
     }

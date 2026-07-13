@@ -1,4 +1,5 @@
 export class AppRoutes {
+  static readonly SPLASH: string = 'pages/SplashPage';
   static readonly HOME: string = 'pages/MainTabPage';
   static readonly LOGIN: string = 'pages/LoginPage';
   static readonly REGISTER: string = 'pages/RegisterPage';
