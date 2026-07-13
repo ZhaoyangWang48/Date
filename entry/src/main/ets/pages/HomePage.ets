@@ -1,12 +1,36 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { FeatureEntryCard } from '../components/FeatureEntryCard';
+import { RecentPhotoCard } from '../components/RecentPhotoCard';
+import { Memory } from '../models/Memory';
 import { HomeFeature } from '../models/HomeFeature';
 import { HomeViewModel } from '../viewmodels/HomeViewModel';
+import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
+import { WidgetPhotoCache } from '../services/WidgetPhotoCache';
 
 @Entry
 @Component
 struct HomePage {
   private readonly viewModel: HomeViewModel = new HomeViewModel();
+  private readonly memoryViewModel: MemoryViewModel = new MemoryViewModel();
+  @State recentPhotos: Memory[] = [];
+
+  aboutToAppear(): void {
+    this.loadRecentPhotos();
+  }
+
+  private async loadRecentPhotos(): Promise<void> {
+    try {
+      const memories = await this.memoryViewModel.listMemories(getContext(this));
+      this.recentPhotos = memories
+        .filter((m: Memory) => m.imageUrl && m.imageUrl.length > 0)
+        .sort((a: Memory, b: Memory) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 10);
+      // 同步写入卡片缓存，供桌面 Widget 读取
+      await WidgetPhotoCache.saveFromMemories(getContext(this), this.recentPhotos);
+    } catch (err) {
+      console.error('Failed to load recent photos:', JSON.stringify(err));
+    }
+  }
 
   private openPage(route: string): void {
     try {
@@ -96,6 +120,14 @@ struct HomePage {
         .backgroundColor($r('app.color.forest_deep'))
         .shadow({ radius: 22, color: '#0C241F45', offsetX: 0, offsetY: 10 })
         .margin({ top: 26, bottom: 30 })
+
+        RecentPhotoCard({
+          photos: this.recentPhotos,
+          onPhotoClick: (memory: Memory) => {
+            this.openPage('pages/MemoryDetailPage');
+          }
+        })
+          .margin({ bottom: 28 })
 
         Row() {
           Text('记忆树')

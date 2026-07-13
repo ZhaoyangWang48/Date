@@ -11,6 +11,22 @@
     {
       "name": "EntryAbility_label",
       "value": "植忆"
+    },
+    {
+      "name": "widget_recent_photo_name",
+      "value": "最近照片"
+    },
+    {
+      "name": "widget_recent_photo_desc",
+      "value": "显示最近上传的记忆照片"
+    },
+    {
+      "name": "EntryFormAbility_desc",
+      "value": "最近照片卡片"
+    },
+    {
+      "name": "EntryFormAbility_label",
+      "value": "最近照片卡片"
     }
   ]
 }

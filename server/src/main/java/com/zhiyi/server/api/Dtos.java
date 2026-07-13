@@ -27,4 +27,7 @@ public final class Dtos {
     public static MemoryResponse from(MemoryEntity memory) { return new MemoryResponse(memory.getId(), memory.getAuthor().getId(), memory.getAuthor().getNickname(), memory.getTreeHole() == null ? 0L : memory.getTreeHole().getId(), memory.getContent(), memory.getImageUrl() == null ? "" : memory.getImageUrl(), memory.getMood(), memory.getMemoryDate(), memory.getMemoryHour(), memory.getCreatedAt()); }
   }
   public record ImageUploadResponse(String imageUrl) { }
+  public record AgentChatRequest(@NotNull Long treeHoleId, @NotBlank @Size(max = 500) String question) { }
+  public record AgentSourceCitation(Long memoryId, String contentSnippet, LocalDate date, String authorName) { }
+  public record AgentChatResponse(String answer, java.util.List<AgentSourceCitation> sources) { }
 }

@@ -92,7 +92,7 @@ export class HttpClient {
         header: this.jsonHeaders(token),
         extraData: body === undefined ? undefined : JSON.stringify(body),
         connectTimeout: 5000,
-        readTimeout: 10000
+        readTimeout: 30000
       });
       return this.parse<T>(response.result, response.responseCode);
     } catch (error) {
