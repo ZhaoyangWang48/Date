@@ -1,0 +1,22 @@
+{
+  "color": [
+    { "name": "start_window_background", "value": "#F2F2F7" },
+    { "name": "app_background", "value": "#F2F2F7" },
+    { "name": "surface", "value": "#FFFFFF" },
+    { "name": "primary", "value": "#247A63" },
+    { "name": "primary_soft", "value": "#E4F2ED" },
+    { "name": "text_primary", "value": "#1C1C1E" },
+    { "name": "text_secondary", "value": "#6C6C70" },
+    { "name": "outline", "value": "#C6C6C8" },
+    { "name": "on_primary", "value": "#FFFFFF" },
+    { "name": "error", "value": "#FF3B30" },
+    { "name": "card_shadow", "value": "#00000012" },
+    { "name": "accent_gold", "value": "#247A63" },
+    { "name": "accent_gold_soft", "value": "#E4F2ED" },
+    { "name": "forest_deep", "value": "#1C1C1E" },
+    { "name": "forest_mid", "value": "#247A63" },
+    { "name": "forest_mist", "value": "#D8EEE6" },
+    { "name": "on_forest", "value": "#FFFFFF" },
+    { "name": "danger_soft", "value": "#FFE9E7" }
+  ]
+}

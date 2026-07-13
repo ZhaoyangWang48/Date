@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "植忆情感记忆记录应用"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "植忆主页面"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "植忆"
+    }
+  ]
+}

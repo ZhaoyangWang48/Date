@@ -1,0 +1,48 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#18201B"
+    },
+    {
+      "name": "app_background",
+      "value": "#18201B"
+    },
+    {
+      "name": "surface",
+      "value": "#222C26"
+    },
+    {
+      "name": "primary",
+      "value": "#92C49D"
+    },
+    {
+      "name": "primary_soft",
+      "value": "#2D4434"
+    },
+    {
+      "name": "text_primary",
+      "value": "#EFF5EF"
+    },
+    {
+      "name": "text_secondary",
+      "value": "#B3BEB7"
+    },
+    {
+      "name": "outline",
+      "value": "#354239"
+    },
+    {
+      "name": "on_primary",
+      "value": "#142019"
+    },
+    {
+      "name": "error",
+      "value": "#FFB4AB"
+    },
+    {
+      "name": "card_shadow",
+      "value": "#30000000"
+    }
+  ]
+}
