@@ -1,0 +1,15 @@
+# 仅用于未配置 MySQL 时的真机联调。数据保存在当前用户目录，重启后仍可保留。
+spring:
+  datasource:
+    url: "jdbc:h2:file:${user.home}/.zhiyi/demo;MODE=MySQL;AUTO_SERVER=TRUE;DATABASE_TO_LOWER=TRUE"
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+zhiyi:
+  demo:
+    seed-enabled: true

@@ -1,0 +1,16 @@
+{
+  "src": [
+    "pages/LoginPage",
+    "pages/RegisterPage",
+    "pages/HomePage",
+    "pages/MainTabPage",
+    "pages/AddMemoryPage",
+    "pages/MemoryListPage",
+    "pages/MemoryDetailPage",
+    "pages/MemoryTreePage",
+    "pages/CommonDayPage",
+    "pages/SharedTreePage",
+    "pages/MinePage",
+    "pages/ToolboxPage"
+  ]
+}

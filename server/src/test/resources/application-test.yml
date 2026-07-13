@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:zhiyi;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+zhiyi:
+  jwt:
+    secret: zhiyi-test-secret-that-is-long-enough-for-hmac-signing-2026
+  storage:
+    upload-dir: ${java.io.tmpdir}/zhiyi-test-uploads
+  demo:
+    seed-enabled: false
