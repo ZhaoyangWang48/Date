@@ -2,6 +2,7 @@ import { preferences } from '@kit.ArkData';
 import { fileIo } from '@kit.CoreFileKit';
 import { Context } from '@kit.AbilityKit';
 import { Memory } from '../models/Memory';
+import { ImagePreloader } from './ImagePreloader';
 
 export class StoredPhoto {
   url: string = '';
@@ -75,10 +76,15 @@ export class WidgetPhotoCache {
   // ========== Async（保留给 onFormVisible / onUpdateForm 使用）==========
 
   static async saveFromMemories(context: Context, memories: Memory[]): Promise<void> {
-    const photos: StoredPhoto[] = memories
+    const recentMemories: Memory[] = memories
       .filter((m: Memory) => m.imageUrl && m.imageUrl.length > 0)
       .sort((a: Memory, b: Memory) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, 4)
+      .slice(0, 4);
+
+    // 卡片首次创建时 onAddForm 必须同步返回，不能在此阶段等待网络下载。
+    // 因此写缓存前统一把网络图片预下载到应用沙箱，缓存中只保存可同步打开的 file URI。
+    const localMemories: Memory[] = await ImagePreloader.preloadPhotos(context, recentMemories);
+    const photos: StoredPhoto[] = localMemories
       .map((m: Memory) => new StoredPhoto(m.imageUrl, m.date));
 
     // 同步写文件（关键：onAddForm 靠这个拿数据）

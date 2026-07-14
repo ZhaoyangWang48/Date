@@ -1,4 +1,6 @@
-@Entry
+const storage: LocalStorage = new LocalStorage();
+
+@Entry(storage)
 @Component
 struct RecentPhotoWidget {
   @LocalStorageProp('photoCount') photoCount: number = 0;

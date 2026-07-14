@@ -1,13 +1,16 @@
 import { MemoryCard } from '../components/MemoryCard';
 import { AppRoutes } from '../constants/AppRoutes';
+import { ApiConfig } from '../constants/ApiConfig';
 import { MoodSelector } from '../components/MoodSelector';
 import { StatePanel } from '../components/StatePanel';
 import { Memory } from '../models/Memory';
 import { TreeHole } from '../models/TreeHole';
 import { TreeMember } from '../models/TreeMember';
 import { ImagePickerService } from '../services/ImagePickerService';
+import { ImageEditSession } from '../services/ImageEditSession';
 import { TokenStorage } from '../services/TokenStorage';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
+import { UploadRepository } from '../repositories/UploadRepository';
 import { TreeHoleViewModel } from '../viewmodels/TreeHoleViewModel';
 import { AgentViewModel } from '../viewmodels/AgentViewModel';
 import { AgentChatResponse, AgentSourceCitation } from '../models/AgentChat';
@@ -34,6 +37,7 @@ struct SharedTreePage {
   @State content: string = '';
   @State mood: string = 'calm';
   @State imageUri: string = '';
+  @State imageUrl: string = '';
   @State message: string = '';
   @State loading: boolean = false;
   @State publishing: boolean = false;
@@ -47,10 +51,15 @@ struct SharedTreePage {
   private readonly treeVm: TreeHoleViewModel = new TreeHoleViewModel();
   private readonly memoryVm: MemoryViewModel = new MemoryViewModel();
   private readonly picker: ImagePickerService = new ImagePickerService();
+  private readonly uploadRepo: UploadRepository = new UploadRepository();
   private readonly agentVm: AgentViewModel = new AgentViewModel();
 
-  aboutToAppear(): void {
-    this.initialize();
+  aboutToAppear(): void { this.initialize(); }
+
+  onPageShow(): void {
+    if (!ImageEditSession.consume()) return;
+    if (ImageEditSession.confirmed) this.imageUrl = ImageEditSession.finalUrl;
+    else { this.imageUri = ''; this.imageUrl = ''; }
   }
 
   private async initialize(): Promise<void> {
@@ -125,12 +134,19 @@ struct SharedTreePage {
   private async chooseImage(): Promise<void> {
     try {
       const uri = await this.picker.pickOneImage();
-      if (uri.length > 0) {
-        this.imageUri = uri;
+      if (uri.length === 0) return;
+      this.imageUri = uri;
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) return;
+      const uploaded = await this.uploadRepo.uploadImage(context, uri);
+      if (uploaded.code !== 200 || uploaded.data === undefined) {
+        this.message = uploaded.message; return;
       }
-    } catch (error) {
-      this.message = '图片选择失败，请重新选择';
-    }
+      this.imageUrl = uploaded.data;
+      this.getUIContext().getRouter().pushUrl({
+        url: AppRoutes.IMAGE_EDIT, params: { imageUrl: this.imageUrl }
+      }, (_error: BusinessError) => {});
+    } catch (error) { /* ignore */ }
   }
 
   private async publish(): Promise<void> {
@@ -139,18 +155,25 @@ struct SharedTreePage {
     try {
       const context = this.getUIContext().getHostContext();
       if (context === undefined) throw new Error('context missing');
-      const result = await this.memoryVm.createMemory(context, this.content, this.imageUri, this.mood,
-        this.selectedId);
+      const now = new Date();
+      const date = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      const result = await this.memoryVm.createWithUrl(context, this.content, this.imageUrl,
+        this.mood, date, now.getHours(), this.selectedId);
       this.message = result.message;
       if (result.success) {
         this.content = '';
-        this.imageUri = '';
+        this.imageUri = ''; this.imageUrl = '';
         this.memories = await this.memoryVm.listTreeHoleMemories(context, this.selectedId);
       }
     } catch (error) {
       this.message = '发布共享记忆失败，请稍后重试';
     }
     this.publishing = false;
+  }
+
+  private displayUrl(): string {
+    if (this.imageUrl.length === 0) return '';
+    return this.imageUrl.startsWith('/') ? ApiConfig.BASE_URL + this.imageUrl : this.imageUrl;
   }
 
   private async deleteMemory(memoryId: number): Promise<void> {
@@ -299,15 +322,15 @@ struct SharedTreePage {
 
           Row({ space: 8 }) {
             Button('共同一天')
-              .fontSize(14)
+              .fontSize(14).height(40)
               .fontColor($r('app.color.primary'))
               .backgroundColor($r('app.color.primary_soft'))
               .borderRadius(16)
               .onClick(() => { this.openCommonDay(); })
             Button('💬 记忆守护者')
-              .fontSize(14)
-              .fontColor('#FFFFFF')
-              .backgroundColor($r('app.color.primary'))
+              .fontSize(14).height(40)
+              .fontColor($r('app.color.primary'))
+              .backgroundColor($r('app.color.primary_soft'))
               .borderRadius(16)
               .onClick(() => { this.showChat = true; })
           }
@@ -358,13 +381,21 @@ struct SharedTreePage {
               }
             })
               .margin({ top: 12 })
-            if (this.imageUri.length > 0) {
-              Image(this.imageUri)
-                .width('100%')
-                .height(120)
-                .objectFit(ImageFit.Cover)
-                .borderRadius(14)
-                .margin({ top: 12 })
+            if (this.imageUrl.length > 0) {
+              Column({ space: 6 }) {
+                Image(this.displayUrl())
+                  .width('100%').height(120)
+                  .objectFit(ImageFit.Cover).borderRadius(14)
+                  .onClick(() => { this.chooseImage(); })
+                Row() {
+                  Blank()
+                  Text('点击重新编辑').fontSize(12).fontColor($r('app.color.text_secondary'))
+                  Blank()
+                  Text('移除').fontSize(12).fontColor($r('app.color.error'))
+                    .onClick(() => { this.imageUri = ''; this.imageUrl = ''; })
+                }.width('100%')
+              }
+              .margin({ top: 12 })
             } else {
               Button('选择图片')
                 .fontColor($r('app.color.primary'))

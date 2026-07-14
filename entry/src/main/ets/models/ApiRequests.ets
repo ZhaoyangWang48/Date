@@ -38,7 +38,6 @@ export class AgentChatRequestBody {
   question: string = '';
   constructor(treeHoleId: number, question: string) { this.treeHoleId = treeHoleId; this.question = question; }
 }
-
 export class CreateTimeCapsuleRequestBody {
   content: string = ''; mood: string = 'calm'; openAt: string = '';
   constructor(content: string, mood: string, openAt: string) { this.content = content; this.mood = mood; this.openAt = openAt; }

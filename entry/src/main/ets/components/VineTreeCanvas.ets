@@ -1,11 +1,17 @@
 import { Memory } from '../models/Memory';
 import { TreeGrowthEngine, TreeGrowthSnapshot } from '../viewmodels/TreeGrowthEngine';
 
+const RECALL_LEAF_X = 270;
+const RECALL_LEAF_Y = 55;
+const RECALL_LEAF_RADIUS = 18;
+
 @Component
 export struct VineTreeCanvas {
   @Prop memories: Memory[] = [];
   @Prop seed: number = 1;
+  @Prop hasRecallCards: boolean = false;
   onLeafSelected: (memoryId: number) => void = () => {};
+  onRecallCardSelected: () => void = () => {};
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
   private snapshot: TreeGrowthSnapshot = new TreeGrowthSnapshot();
@@ -18,6 +24,15 @@ export struct VineTreeCanvas {
       .borderRadius(20)
       .onReady(() => { this.playGrowth(); })
       .onClick((event: ClickEvent) => {
+        // 优先检测回忆卡片叶子
+        if (this.hasRecallCards) {
+          const dx = event.x - RECALL_LEAF_X;
+          const dy = event.y - RECALL_LEAF_Y;
+          if (Math.hypot(dx, dy) <= RECALL_LEAF_RADIUS + 10) {
+            this.onRecallCardSelected();
+            return;
+          }
+        }
         const memoryId = TreeGrowthEngine.hitTest(this.snapshot.leaves, event.x, event.y);
         if (memoryId > 0) this.onLeafSelected(memoryId);
       })
@@ -49,6 +64,9 @@ export struct VineTreeCanvas {
       this.drawSeedling();
     } else {
       this.drawLeaves(progress);
+    }
+    if (this.hasRecallCards) {
+      this.drawRecallLeaf(progress);
     }
   }
 
@@ -134,6 +152,52 @@ export struct VineTreeCanvas {
       this.context.beginPath(); this.context.moveTo(0, -leaf.radius * 0.22); this.context.lineTo(leaf.radius * 0.48, leaf.radius * 0.12); this.context.moveTo(0, leaf.radius * 0.14); this.context.lineTo(-leaf.radius * 0.45, leaf.radius * 0.42); this.context.stroke();
       this.context.restore();
     }
+  }
+
+  private drawRecallLeaf(progress: number): void {
+    if (progress < 0.6) return;
+    const radius = RECALL_LEAF_RADIUS;
+    this.context.save();
+    this.context.translate(RECALL_LEAF_X, RECALL_LEAF_Y);
+
+    // 金色光晕
+    this.context.globalAlpha = 0.22;
+    this.context.fillStyle = '#F9D56E';
+    this.context.beginPath();
+    this.context.arc(0, 0, radius * 1.5, 0, Math.PI * 2);
+    this.context.fill();
+
+    // 金色叶片
+    const fill = this.context.createLinearGradient(-radius, -radius, radius, radius);
+    fill.addColorStop(0, '#FFF7E6');
+    fill.addColorStop(0.3, '#F9D56E');
+    fill.addColorStop(1, '#C8963E');
+    this.context.globalAlpha = 0.85;
+    this.context.fillStyle = fill;
+    this.context.beginPath();
+    this.context.moveTo(0, -radius * 1.22);
+    this.context.bezierCurveTo(radius, -radius * 0.48, radius * 0.9, radius * 0.76, 0, radius * 1.18);
+    this.context.bezierCurveTo(-radius * 0.9, radius * 0.76, -radius, -radius * 0.48, 0, -radius * 1.22);
+    this.context.fill();
+
+    // 中心脉纹
+    this.context.globalAlpha = 0.5;
+    this.context.strokeStyle = '#8B6914';
+    this.context.lineWidth = 0.8;
+    this.context.beginPath();
+    this.context.moveTo(0, -radius * 0.82);
+    this.context.lineTo(0, radius * 0.8);
+    this.context.stroke();
+
+    // ✦ 标记
+    this.context.globalAlpha = 0.9;
+    this.context.fillStyle = '#8B6914';
+    this.context.font = `${radius * 0.9}px sans-serif`;
+    this.context.textAlign = 'center';
+    this.context.textBaseline = 'middle';
+    this.context.fillText('✦', 0, 0);
+
+    this.context.restore();
   }
 
   private drawSeedling(): void {

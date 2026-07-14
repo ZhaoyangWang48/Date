@@ -1,4 +1,3 @@
-
 spring:
   application:
     name: zhiyi-server
@@ -29,7 +28,8 @@ zhiyi:
   demo:
     seed-enabled: ${ZHIYI_DEMO_SEED_ENABLED:true}
   ai:
-    api-key: ${ZHIYI_AI_API_KEY:REMOVED_SECRET016b1cdcb8}
+    # 记忆总结和记忆守护者共用此配置；密钥只通过环境变量提供。
+    api-key: ${ZHIYI_AI_API_KEY:}
     base-url: ${ZHIYI_AI_BASE_URL:https://api.deepseek.com}
     embedding-model: ${ZHIYI_AI_EMBEDDING_MODEL:}
     chat-model: ${ZHIYI_AI_CHAT_MODEL:deepseek-v4-flash}
