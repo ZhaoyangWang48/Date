@@ -30,6 +30,12 @@ class PhotoWidgetData {
 export default class EntryFormAbility extends FormExtensionAbility {
   private readonly memoryRepository: MemoryRepository = new MemoryRepository();
   private readonly retainedFormFds: number[] = [];
+  private imageSequence: number = 0;
+
+  private nextImageKey(slot: string): string {
+    this.imageSequence = this.imageSequence + 1;
+    return `${slot}_${Date.now()}_${this.imageSequence}`;
+  }
 
   private openLocalImage(source: string): DownloadResult | null {
     try {
@@ -99,21 +105,22 @@ export default class EntryFormAbility extends FormExtensionAbility {
 
     const keys: string[] = ['photo0', 'photo1', 'photo2', 'photo3'];
     for (let i = 0; i < Math.min(photos.length, 4); i++) {
-      const key: string = keys[i];
+      const slot: string = keys[i];
       const photo: StoredPhoto = photos[i];
       if (photo.url.length > 0) {
-        const result: DownloadResult | null = await this.downloadImage(photo.url, key);
+        const result: DownloadResult | null = await this.downloadImage(photo.url, slot);
         if (result && result.fd >= 0) {
-          // formImages 的键是卡片使用的逻辑图片名；值才是文件描述符。
-          // 卡片端以 memory://photo0 的形式读取，不能把沙箱路径当作键。
-          imageMap[key] = result.fd;
-          this.setPhotoField(data, key, key);
+          // 每次更新都换一个逻辑图片名，强制卡片渲染进程重新读取 fd。
+          const imageKey: string = this.nextImageKey(slot);
+          imageMap[imageKey] = result.fd;
+          this.setPhotoField(data, slot, imageKey);
         }
       }
-      this.setPhotoDate(data, key, photo.date);
+      this.setPhotoDate(data, slot, photo.date);
     }
 
     data.formImages = imageMap;
+    data.hasPhotos = Object.keys(imageMap).length > 0 ? 1 : 0;
     return data;
   }
 
@@ -136,14 +143,15 @@ export default class EntryFormAbility extends FormExtensionAbility {
     const keys: string[] = ['photo0', 'photo1', 'photo2', 'photo3'];
     for (let i = 0; i < Math.min(photos.length, 4); i++) {
       const photo = photos[i];
-      const key = keys[i];
-      this.setPhotoDate(data, key, photo.date);
+      const slot = keys[i];
+      this.setPhotoDate(data, slot, photo.date);
       if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) continue;
       const result = this.openLocalImage(photo.url);
       if (result && result.fd >= 0) {
-        imageMap[key] = result.fd;
+        const imageKey: string = this.nextImageKey(slot);
+        imageMap[imageKey] = result.fd;
         this.retainedFormFds.push(result.fd);
-        this.setPhotoField(data, key, key);
+        this.setPhotoField(data, slot, imageKey);
       }
     }
     data.formImages = imageMap;
@@ -231,6 +239,12 @@ export default class EntryFormAbility extends FormExtensionAbility {
 
   onAddForm(want: Want): formBindingData.FormBindingData {
     console.info('[Form] onAddForm');
+    // 同步返回缓存后再异步刷新一次：兼容首次安装、旧版 HTTP 缓存和卡片选择页预览。
+    const rawFormId = want.parameters?.[formInfo.FormParam.IDENTITY_KEY];
+    const formId: string = rawFormId === undefined ? '' : `${rawFormId}`;
+    if (formId.length > 0) {
+      setTimeout(() => { this.loadWidgetData(formId); }, 100);
+    }
     // 同步加载缓存数据（onAddForm 必须同步返回）
     const photos: StoredPhoto[] = WidgetPhotoCache.loadSync(this.context);
     if (photos.length > 0) {

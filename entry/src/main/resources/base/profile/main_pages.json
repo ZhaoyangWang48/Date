@@ -1,5 +1,6 @@
 {
   "src": [
+    "pages/SplashPage",
     "pages/LoginPage",
     "pages/RegisterPage",
     "pages/HomePage",
@@ -15,6 +16,12 @@
     "pages/TimeCapsuleGardenPage",
     "pages/CapsuleOpenPage",
     "pages/MemoryRadioPage",
-    "pages/DriftBottlePage"
+    "pages/DriftBottlePage",
+    "pages/RecallCardListPage",
+    "pages/RecallCardDetailPage",
+    "pages/ImageEditPage",
+    "pages/CropPage",
+    "pages/EnhancePage",
+    "pages/ImageViewPage"
   ]
 }

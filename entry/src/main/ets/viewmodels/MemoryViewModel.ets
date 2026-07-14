@@ -72,6 +72,39 @@ export class MemoryViewModel {
     return new MemoryActionResult(result.code === 200, result.message);
   }
 
+  async createMemoryWithImage(context: Context, content: string, imageUri: string, mood: string,
+    optimize: boolean, cropX: number, cropY: number, cropW: number, cropH: number,
+    treeHoleId: number = 0): Promise<MemoryActionResult> {
+    const now = new Date();
+    const date = `${now.getFullYear()}-${this.pad(now.getMonth() + 1)}-${this.pad(now.getDate())}`;
+    const text = content.trim();
+    if (text.length === 0 && imageUri.length === 0) {
+      return new MemoryActionResult(false, '请写下一段记忆，或选择一张图片');
+    }
+    let imageUrl = '';
+    if (imageUri.length > 0) {
+      const uploaded = await this.uploadRepository.uploadWithOptions(context, imageUri,
+        optimize, cropX, cropY, cropW, cropH);
+      if (uploaded.code !== 200 || uploaded.data === undefined) {
+        return new MemoryActionResult(false, uploaded.message);
+      }
+      imageUrl = uploaded.data;
+    }
+    const created = await this.memoryRepository.create(context, text, imageUrl, mood, date, now.getHours(), treeHoleId);
+    if (created.code !== 200 || created.data === undefined) return new MemoryActionResult(false, created.message);
+    return new MemoryActionResult(true, created.message, created.data);
+  }
+
+  async createWithUrl(context: Context, content: string, imageUrl: string, mood: string,
+    date: string, hour: number, treeHoleId: number = 0): Promise<MemoryActionResult> {
+    const text = content.trim();
+    if (text.length === 0 && imageUrl.length === 0)
+      return new MemoryActionResult(false, '请写下一段记忆，或选择一张图片');
+    const created = await this.memoryRepository.create(context, text, imageUrl, mood, date, hour, treeHoleId);
+    if (created.code !== 200 || created.data === undefined) return new MemoryActionResult(false, created.message);
+    return new MemoryActionResult(true, created.message, created.data);
+  }
+
   private pad(value: number): string {
     return value < 10 ? `0${value}` : `${value}`;
   }
