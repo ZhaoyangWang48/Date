@@ -4,6 +4,8 @@ import { AppRoutes } from '../constants/AppRoutes';
 import { MoodSelector } from '../components/MoodSelector';
 import { ImagePickerService } from '../services/ImagePickerService';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
+import { WidgetPhotoCache } from '../services/WidgetPhotoCache';
+import { Memory } from '../models/Memory';
 
 @Entry
 @Component
@@ -37,12 +39,29 @@ struct AddMemoryPage {
         this.message = result.message;
         return;
       }
+      // 创建成功后更新 Widget 缓存，确保桌面卡片能获取最新照片
+      this.refreshWidgetCache(context);
       this.getUIContext().getRouter().replaceUrl({ url: AppRoutes.HOME }, (_error: BusinessError) => {});
     } catch (_error) {
       this.message = '提交未完成，请重新尝试';
     } finally {
       this.loading = false;
     }
+  }
+
+  /**
+   * 刷新 Widget 缓存，使桌面卡片能获取最新照片。
+   */
+  private refreshWidgetCache(context: Context): void {
+    this.viewModel.listMemories(context).then((memories: Memory[]) => {
+      const photos = memories.filter((m: Memory) => m.imageUrl && m.imageUrl.length > 0)
+        .sort((a: Memory, b: Memory) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      WidgetPhotoCache.saveFromMemories(context, photos);
+    }).catch(() => {
+      // 缓存更新失败不影响主流程
+    });
   }
 
   build() {
