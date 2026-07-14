@@ -18,9 +18,11 @@ export class TimeCapsuleRepository {
   private many(result: ApiResult<TimeCapsule[]>): ApiResult<TimeCapsule[]> { return result.data === undefined ? result : new ApiResult<TimeCapsule[]>(result.code, result.message, result.data.map((item: TimeCapsule) => this.map(item))); }
   private map(raw: TimeCapsule): TimeCapsule {
     const item = new TimeCapsule();
-    item.id = raw.id; item.authorId = raw.authorId; item.authorName = raw.authorName; item.content = raw.content;
+    item.id = raw.id; item.authorId = raw.authorId; item.authorName = raw.authorName; item.isOpened = raw.isOpened;
+    // 兼容尚未升级的服务端：未开启正文即使被返回，也不进入客户端状态。
+    item.content = item.isOpened ? raw.content : '';
     item.mood = raw.mood; item.sealDate = raw.sealDate; item.openDate = raw.openDate; item.openAt = raw.openAt;
-    item.actualOpenDate = raw.actualOpenDate; item.isOpened = raw.isOpened;
+    item.actualOpenDate = raw.actualOpenDate;
     return item;
   }
 }

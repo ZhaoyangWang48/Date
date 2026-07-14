@@ -7,7 +7,9 @@ import { ImagePickerService } from '../services/ImagePickerService';
 import { TokenStorage } from '../services/TokenStorage';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
 import { TreeHole } from '../models/TreeHole';
+import { TreeMember } from '../models/TreeMember';
 import { TreeHoleViewModel } from '../viewmodels/TreeHoleViewModel';
+import { CollageExportResult, CommonDayCollageService } from '../services/CommonDayCollageService';
 
 @Entry
 @Component
@@ -25,10 +27,14 @@ struct CommonDayPage {
   @State publishing: boolean = false;
   @State errorMessage: string = '';
   @State trees: TreeHole[] = [];
+  @State members: TreeMember[] = [];
   @State selectedTreeId: number = 0;
+  @State exporting: boolean = false;
+  @State exportMessage: string = '';
   private readonly vm: MemoryViewModel = new MemoryViewModel();
   private readonly picker: ImagePickerService = new ImagePickerService();
   private readonly treeVm: TreeHoleViewModel = new TreeHoleViewModel();
+  private readonly collageService: CommonDayCollageService = new CommonDayCollageService();
 
   aboutToAppear(): void {
     this.dateText = this.format(this.selectedDate);
@@ -42,7 +48,11 @@ struct CommonDayPage {
       this.nickname = await TokenStorage.getNickname(context);
       this.trees = await this.treeVm.listMine(context);
       if (this.trees.length > 0) {
-        this.selectedTreeId = this.trees[0].id;
+        const params = this.getUIContext().getRouter().getParams() as Record<string, number>;
+        const requestedTreeId: number = params === undefined ? 0 : params['treeId'];
+        const requestedTree: TreeHole | undefined =
+          this.trees.find((tree: TreeHole) => tree.id === requestedTreeId);
+        this.selectedTreeId = requestedTree === undefined ? this.trees[0].id : requestedTree.id;
         await this.load();
       } else {
         this.errorMessage = '请先创建或加入一个树洞';
@@ -53,12 +63,13 @@ struct CommonDayPage {
   }
 
   private async load(): Promise<void> {
-    if (this.selectedTreeId === 0) { this.memories = []; return; }
+    if (this.selectedTreeId === 0) { this.memories = []; this.members = []; return; }
     this.loading = true;
     this.errorMessage = '';
     try {
       const context = this.getUIContext().getHostContext();
       if (context === undefined) throw new Error('context missing');
+      this.members = await this.treeVm.members(context, this.selectedTreeId);
       this.memories = await this.vm.listDateMemories(context, this.selectedTreeId, this.dateText);
     } catch (error) {
       this.errorMessage = '共同日数据加载失败，请稍后重试';
@@ -69,7 +80,49 @@ struct CommonDayPage {
   private async changeDate(value: Date): Promise<void> {
     this.selectedDate = value;
     this.dateText = this.format(this.selectedDate);
+    this.exportMessage = '';
     await this.load();
+  }
+
+  private async exportSelectedHour(): Promise<void> {
+    if (this.exporting) return;
+    this.exportMessage = '';
+    if (this.members.length < 2 || this.members.length > 4) {
+      this.exportMessage = `当前树洞有 ${this.members.length} 人，仅支持 2–4 人导出`;
+      return;
+    }
+
+    const selectedPhotos: Memory[] = [];
+    const missingMembers: string[] = [];
+    for (let i: number = 0; i < this.members.length; i++) {
+      const member: TreeMember = this.members[i];
+      const candidates: Memory[] = this.memories
+        .filter((memory: Memory) => memory.hour === this.selectedHour &&
+          memory.authorId === member.userId && memory.imageUrl.length > 0)
+        .sort((a: Memory, b: Memory) => b.createdAt.localeCompare(a.createdAt));
+      if (candidates.length === 0) {
+        missingMembers.push(member.nickname);
+      } else {
+        selectedPhotos.push(candidates[0]);
+      }
+    }
+
+    if (missingMembers.length > 0) {
+      this.exportMessage = `无法导出：${missingMembers.join('、')} 尚未上传 ${this.selectedHour}:00 的图片`;
+      return;
+    }
+
+    this.exporting = true;
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) throw new Error('context missing');
+      const result: CollageExportResult = await this.collageService.export(
+        context, selectedPhotos, this.dateText, this.selectedHour);
+      this.exportMessage = result.message;
+    } catch (_error) {
+      this.exportMessage = '导出失败，请稍后重试';
+    }
+    this.exporting = false;
   }
 
   private async chooseImage(): Promise<void> {
@@ -144,7 +197,11 @@ struct CommonDayPage {
                 .fontColor(this.selectedTreeId === tree.id ? $r('app.color.on_primary') : $r('app.color.primary'))
                 .backgroundColor(this.selectedTreeId === tree.id ? $r('app.color.primary') : $r('app.color.primary_soft'))
                 .borderRadius(14)
-                .onClick(() => { this.selectedTreeId = tree.id; this.load(); })
+                .onClick(() => {
+                  this.selectedTreeId = tree.id;
+                  this.exportMessage = '';
+                  this.load();
+                })
             }, (tree: TreeHole) => tree.id.toString())
           }
           .width('100%')
@@ -170,8 +227,43 @@ struct CommonDayPage {
           selectedHour: this.selectedHour,
           onChanged: (hour: number) => {
             this.selectedHour = hour;
+            this.exportMessage = '';
           }
         })
+
+        Column({ space: 8 }) {
+          Text(`导出 ${this.dateText} ${this.selectedHour}:00 的共同图片`)
+            .fontSize(15)
+            .fontWeight(FontWeight.Medium)
+            .fontColor($r('app.color.text_primary'))
+            .width('100%')
+          Text(this.members.length === 4 ?
+            '四人按左上、左下、右上、右下排列' : '两人或三人横向并排排列')
+            .fontSize(13)
+            .fontColor($r('app.color.text_secondary'))
+            .width('100%')
+          Button(this.exporting ? '正在合成…' : '一键导出共同图片')
+            .width('100%')
+            .height(46)
+            .enabled(!this.exporting)
+            .fontColor($r('app.color.on_primary'))
+            .backgroundColor($r('app.color.primary'))
+            .borderRadius(14)
+            .onClick(() => { this.exportSelectedHour(); })
+          if (this.exportMessage.length > 0) {
+            Text(this.exportMessage)
+              .fontSize(13)
+              .fontColor(this.exportMessage === '拼图已保存到相册' ?
+                $r('app.color.primary') : $r('app.color.error'))
+              .width('100%')
+          }
+        }
+        .width('100%')
+        .padding(16)
+        .margin({ top: 16 })
+        .backgroundColor($r('app.color.surface'))
+        .borderRadius(16)
+        .border({ width: 1, color: $r('app.color.outline') })
 
         Text(`发布 ${this.selectedHour}:00 的记录`)
           .fontSize(16)

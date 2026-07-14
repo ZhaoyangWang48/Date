@@ -23,6 +23,15 @@ export class CreateMemoryRequestBody {
   }
 }
 
+export class GenerateMemoryDraftRequestBody {
+  imageUrl: string = '';
+  capturedAt: string = '';
+  constructor(imageUrl: string, capturedAt: string) {
+    this.imageUrl = imageUrl;
+    this.capturedAt = capturedAt;
+  }
+}
+
 export class CreateTreeHoleRequestBody {
   name: string = '';
   constructor(name: string) { this.name = name; }
@@ -38,7 +47,6 @@ export class AgentChatRequestBody {
   question: string = '';
   constructor(treeHoleId: number, question: string) { this.treeHoleId = treeHoleId; this.question = question; }
 }
-
 export class CreateTimeCapsuleRequestBody {
   content: string = ''; mood: string = 'calm'; openAt: string = '';
   constructor(content: string, mood: string, openAt: string) { this.content = content; this.mood = mood; this.openAt = openAt; }

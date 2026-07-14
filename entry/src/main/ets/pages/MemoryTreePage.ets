@@ -1,10 +1,12 @@
 import { BusinessError } from '@kit.BasicServicesKit';
+import { promptAction } from '@kit.ArkUI';
 import { AppRoutes } from '../constants/AppRoutes';
 import { MoodOption, MoodTypes } from '../constants/MoodTypes';
 import { StatePanel } from '../components/StatePanel';
 import { VineTreeCanvas } from '../components/VineTreeCanvas';
 import { Memory } from '../models/Memory';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
+import { RecallCardViewModel } from '../viewmodels/RecallCardViewModel';
 import { TokenStorage } from '../services/TokenStorage';
 
 @Entry
@@ -14,10 +16,15 @@ struct MemoryTreePage {
   @State loaded: boolean = false;
   @State errorMessage: string = '';
   @State userSeed: number = 1;
+  @State hasRecallCards: boolean = false;
+  @State recallCardCount: number = 0;
+  @State generating: boolean = false;
   private readonly viewModel: MemoryViewModel = new MemoryViewModel();
+  private readonly recallViewModel: RecallCardViewModel = new RecallCardViewModel();
 
   aboutToAppear(): void {
     this.loadMemories();
+    this.checkRecallCards();
   }
 
   private async loadMemories(): Promise<void> {
@@ -33,161 +40,207 @@ struct MemoryTreePage {
     this.loaded = true;
   }
 
+  private async checkRecallCards(): Promise<void> {
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) return;
+      const cards = await this.recallViewModel.list(context);
+      this.hasRecallCards = cards.length > 0;
+      this.recallCardCount = cards.length;
+    } catch (error) { /* ignore */ }
+  }
+
+  private async onGenerateRecall(): Promise<void> {
+    if (this.generating) return;
+    this.generating = true;
+    try {
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) {
+        promptAction.showToast({ message: '无法获取应用上下文' });
+        this.generating = false;
+        return;
+      }
+      const result = await this.recallViewModel.generate(context);
+      promptAction.showToast({ message: result.message });
+      if (result.success) {
+        this.hasRecallCards = true;
+        this.recallCardCount = this.recallCardCount + 1;
+      }
+    } catch (error) {
+      promptAction.showToast({ message: '生成失败，请重试' });
+    }
+    this.generating = false;
+  }
+
   private openDetail(memoryId: number): void {
     try {
-      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.MEMORY_DETAIL, params: { memoryId: memoryId } },
+      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.MEMORY_DETAIL,
+        params: { memoryId: memoryId } }, (error: BusinessError) => {});
+    } catch (error) {}
+  }
+
+  private openRecallCardList(): void {
+    try {
+      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.RECALL_CARD_LIST },
         (error: BusinessError) => {});
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   private openAddMemory(): void {
     try {
-      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.ADD_MEMORY }, (error: BusinessError) => {});
-    } catch (error) {
-    }
+      this.getUIContext().getRouter().pushUrl({ url: AppRoutes.ADD_MEMORY },
+        (error: BusinessError) => {});
+    } catch (error) {}
   }
 
   build() {
-    Scroll() {
-      Column({ space: 0 }) {
-        Row() {
-          Column({ space: 6 }) {
-            Text('MEMORY CANOPY')
-              .fontSize(11)
-              .letterSpacing(1.8)
-              .fontColor($r('app.color.accent_gold'))
-            Text('记忆树')
-              .fontSize(30)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.text_primary'))
-            Text('在夜色里，收藏被认真对待的瞬间。')
+    Column() {
+      Scroll() {
+        Column({ space: 0 }) {
+          Row() {
+            Column({ space: 6 }) {
+              Text('MEMORY CANOPY')
+                .fontSize(11)
+                .letterSpacing(1.8)
+                .fontColor($r('app.color.accent_gold'))
+              Text('记忆树')
+                .fontSize(30)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('app.color.text_primary'))
+              Text('在夜色里，收藏被认真对待的瞬间。')
+                .fontSize(14)
+                .fontColor($r('app.color.text_secondary'))
+            }
+            .alignItems(HorizontalAlign.Start)
+            Blank()
+            Button('+ 种下')
               .fontSize(14)
-              .fontColor($r('app.color.text_secondary'))
-          }
-          .alignItems(HorizontalAlign.Start)
-          Blank()
-          Button('+ 种下')
-            .fontSize(14)
-            .fontColor($r('app.color.on_primary'))
-            .backgroundColor($r('app.color.primary'))
-            .borderRadius(16)
-            .onClick(() => {
-              this.openAddMemory();
-            })
-        }
-        .width('100%')
-
-        Row({ space: 10 }) {
-          Column({ space: 4 }) {
-            Text(`${this.memories.length}`)
-              .fontSize(23)
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.primary'))
-            Text('全部叶片')
-              .fontSize(11)
-              .fontColor($r('app.color.text_secondary'))
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-          Column({ space: 4 }) {
-            Text('此刻')
-              .fontSize(17)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.accent_gold'))
-            Text('继续生长')
-              .fontSize(11)
-              .fontColor($r('app.color.text_secondary'))
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-          Column({ space: 4 }) {
-            Text('∞')
-              .fontSize(24)
-              .fontWeight(FontWeight.Medium)
-              .fontColor($r('app.color.primary'))
-            Text('故事未完')
-              .fontSize(11)
-              .fontColor($r('app.color.text_secondary'))
-          }
-          .layoutWeight(1)
-          .alignItems(HorizontalAlign.Start)
-        }
-        .width('100%')
-        .padding(16)
-        .margin({ top: 22 })
-        .borderRadius(22)
-        .backgroundColor($r('app.color.surface'))
-        .border({ width: 1, color: $r('app.color.outline') })
-
-        if (!this.loaded) {
-          StatePanel({ title: '正在生成记忆树', description: '叶片颜色和位置正在计算。', stateIcon: '⏳' })
-            .margin({ top: 72 })
-        } else if (this.errorMessage.length > 0) {
-          StatePanel({ title: '加载失败', description: this.errorMessage, stateIcon: '!' })
-            .margin({ top: 72 })
-        } else if (this.memories.length === 0) {
-          Column({ space: 14 }) {
-            StatePanel({ title: '一棵树正等待第一片叶子', description: '添加一段记忆后，它会按心情长成不同颜色的叶片。', stateIcon: '🌱' })
-            Button('种下第一段记忆')
-              .fontSize(16)
               .fontColor($r('app.color.on_primary'))
               .backgroundColor($r('app.color.primary'))
-              .borderRadius(14)
-              .onClick(() => {
-                this.openAddMemory();
-              })
+              .borderRadius(16)
+              .onClick(() => { this.openAddMemory(); })
           }
           .width('100%')
-          .margin({ top: 70 })
-        } else {
-          VineTreeCanvas({
-            memories: this.memories,
-            seed: this.userSeed,
-            onLeafSelected: (memoryId: number) => {
-              this.openDetail(memoryId);
-            }
-          })
-          .margin({ top: 24 })
-
-          Row() {
-            Text('点击一片叶子，打开那一刻的记忆。')
-              .fontSize(13)
-              .fontColor($r('app.color.text_secondary'))
-            Blank()
-            Text('筛选  ·  全部')
-              .fontSize(12)
-              .fontColor($r('app.color.primary'))
-          }
-          .width('100%')
-          .margin({ top: 16 })
 
           Row({ space: 10 }) {
-            ForEach(MoodTypes.OPTIONS, (option: MoodOption) => {
-              Row({ space: 4 }) {
-                Text(option.icon)
-                  .fontSize(16)
-                  .fontColor($r('app.color.primary'))
-                Text(option.label)
-                  .fontSize(12)
-                  .fontColor($r('app.color.text_secondary'))
-              }
-            }, (option: MoodOption) => option.key)
+            Column({ space: 4 }) {
+              Text(`${this.memories.length}`)
+                .fontSize(23)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('app.color.primary'))
+              Text('全部叶片')
+                .fontSize(11)
+                .fontColor($r('app.color.text_secondary'))
+            }
+            .layoutWeight(1).alignItems(HorizontalAlign.Start)
+            Column({ space: 4 }) {
+              Text(`${this.recallCardCount}`)
+                .fontSize(23)
+                .fontWeight(FontWeight.Bold)
+                .fontColor($r('app.color.accent_gold'))
+              Text('回忆卡片')
+                .fontSize(11)
+                .fontColor($r('app.color.text_secondary'))
+            }
+            .layoutWeight(1).alignItems(HorizontalAlign.Start)
+            Column({ space: 4 }) {
+              Text('∞')
+                .fontSize(24)
+                .fontWeight(FontWeight.Medium)
+                .fontColor($r('app.color.primary'))
+              Text('故事未完')
+                .fontSize(11)
+                .fontColor($r('app.color.text_secondary'))
+            }
+            .layoutWeight(1).alignItems(HorizontalAlign.Start)
           }
           .width('100%')
-          .padding(12)
-          .borderRadius(18)
+          .padding(16)
+          .margin({ top: 22 })
+          .borderRadius(22)
           .backgroundColor($r('app.color.surface'))
-          .margin({ top: 14 })
+          .border({ width: 1, color: $r('app.color.outline') })
+
+          if (!this.loaded) {
+            StatePanel({ title: '正在生成记忆树',
+              description: '叶片颜色和位置正在计算。', stateIcon: '⏳' }).margin({ top: 72 })
+          } else if (this.errorMessage.length > 0) {
+            StatePanel({ title: '加载失败',
+              description: this.errorMessage, stateIcon: '!' }).margin({ top: 72 })
+          } else if (this.memories.length === 0) {
+            Column({ space: 14 }) {
+              StatePanel({ title: '一棵树正等待第一片叶子',
+                description: '添加一段记忆后，它会按心情长成不同颜色的叶片。',
+                stateIcon: '🌱' })
+              Button('种下第一段记忆')
+                .fontSize(16).fontColor($r('app.color.on_primary'))
+                .backgroundColor($r('app.color.primary')).borderRadius(14)
+                .onClick(() => { this.openAddMemory(); })
+            }
+            .width('100%').margin({ top: 70 })
+          } else {
+            VineTreeCanvas({
+              memories: this.memories,
+              seed: this.userSeed,
+              hasRecallCards: this.hasRecallCards,
+              onLeafSelected: (memoryId: number) => { this.openDetail(memoryId); },
+              onRecallCardSelected: () => { this.openRecallCardList(); }
+            }).margin({ top: 24 })
+
+            Row() {
+              Text('点击一片叶子，打开那一刻的记忆。')
+                .fontSize(13).fontColor($r('app.color.text_secondary'))
+              Blank()
+              Text('筛选  ·  全部')
+                .fontSize(12).fontColor($r('app.color.primary'))
+            }
+            .width('100%').margin({ top: 16 })
+
+            Row({ space: 10 }) {
+              ForEach(MoodTypes.OPTIONS, (option: MoodOption) => {
+                Row({ space: 4 }) {
+                  Text(option.icon).fontSize(16).fontColor($r('app.color.primary'))
+                  Text(option.label).fontSize(12).fontColor($r('app.color.text_secondary'))
+                }
+              }, (option: MoodOption) => option.key)
+            }
+            .width('100%').padding(12).borderRadius(18)
+            .backgroundColor($r('app.color.surface')).margin({ top: 14 })
+          }
         }
+        .alignItems(HorizontalAlign.Center)
+        .width('100%')
+        .padding({ left: 20, right: 20, top: 38, bottom: 28 })
       }
-      .alignItems(HorizontalAlign.Center)
       .width('100%')
-      .padding({ left: 20, right: 20, top: 38, bottom: 28 })
+      .scrollBar(BarState.Off)
+      .backgroundColor($r('app.color.app_background'))
+      .layoutWeight(1)
+
+      // 绿色按钮 — 触发回忆总结，无条件渲染
+      Row() {
+        Column() {
+          if (this.generating) {
+            LoadingProgress()
+              .width(24).height(24).color(Color.White)
+          } else {
+            Text('✦')
+              .fontSize(24).fontColor(Color.White)
+          }
+        }
+        .width(52).height(52)
+        .borderRadius(26)
+        .backgroundColor('#4CAF50')
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+        .shadow({ radius: 8, color: '#4CAF5080', offsetY: 2 })
+        .onClick(() => { this.onGenerateRecall(); })
+      }
+      .width('100%')
+      .padding({ left: 24, top: 8 })
     }
     .width('100%')
     .height('100%')
-    .scrollBar(BarState.Off)
     .backgroundColor($r('app.color.app_background'))
   }
 }

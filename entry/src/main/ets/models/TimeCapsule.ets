@@ -22,6 +22,9 @@ export class TimeCapsule {
   isReady(now: number = Date.now()): boolean {
     return !this.isOpened && (this.openAt.length > 0 || this.openDate.length > 0) && this.remainingMilliseconds(now) <= 0;
   }
+  displayContent(): string {
+    return this.isOpened ? this.content : '内容已封存，开启后可见';
+  }
   remainingText(now: number = Date.now()): string {
     if (this.isOpened) return '已开启';
     if (this.openAt.length === 0 && this.openDate.length === 0) return '开启时间未知';
