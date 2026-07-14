@@ -20,6 +20,10 @@
         "2*2",
         "2*4"
       ],
+      "previewImages": [
+        "$media:empty_memory_illustration",
+        "$media:empty_memory_illustration"
+      ],
       "formVisibleNotify": true,
       "metadata": []
     }
