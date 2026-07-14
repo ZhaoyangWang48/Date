@@ -11,6 +11,10 @@
     "pages/CommonDayPage",
     "pages/SharedTreePage",
     "pages/MinePage",
-    "pages/ToolboxPage"
+    "pages/ToolboxPage",
+    "pages/TimeCapsuleGardenPage",
+    "pages/CapsuleOpenPage",
+    "pages/MemoryRadioPage",
+    "pages/DriftBottlePage"
   ]
 }

@@ -29,12 +29,35 @@ class PhotoWidgetData {
 
 export default class EntryFormAbility extends FormExtensionAbility {
   private readonly memoryRepository: MemoryRepository = new MemoryRepository();
+  private readonly retainedFormFds: number[] = [];
+
+  private openLocalImage(source: string): DownloadResult | null {
+    try {
+      const file: fileIo.File = fileIo.openSync(source, fileIo.OpenMode.READ_ONLY);
+      const result = new DownloadResult();
+      result.path = source;
+      result.fd = file.fd;
+      return result;
+    } catch (err) {
+      console.error(`[Form] Open local image failed: ${source} ${JSON.stringify(err)}`);
+      return null;
+    }
+  }
 
   private async downloadImage(url: string, key: string): Promise<DownloadResult | null> {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return this.openLocalImage(url);
+    }
     let httpRequest: http.HttpRequest | null = null;
     try {
       const ext = url.includes('.png') ? 'png' : 'jpg';
-      const filePath = `${this.context.cacheDir}/widget_${key}.${ext}`;
+      const directory = `${this.context.filesDir}/widget_photos`;
+      try {
+        fileIo.mkdirSync(directory);
+      } catch (_) {
+        // 文件夹已存在时继续使用。
+      }
+      const filePath = `${directory}/widget_${key}.${ext}`;
       httpRequest = http.createHttp();
       const response: http.HttpResponse = await httpRequest.request(url, {
         method: http.RequestMethod.GET,
@@ -47,7 +70,8 @@ export default class EntryFormAbility extends FormExtensionAbility {
         return null;
       }
       const arrayBuffer: ArrayBuffer = response.result as ArrayBuffer;
-      const file: fileIo.File = fileIo.openSync(filePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
+      const file: fileIo.File = fileIo.openSync(filePath,
+        fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC | fileIo.OpenMode.WRITE_ONLY);
       fileIo.writeSync(file.fd, arrayBuffer);
       fileIo.closeSync(file);
       const readFile: fileIo.File = fileIo.openSync(filePath, fileIo.OpenMode.READ_ONLY);
@@ -80,14 +104,50 @@ export default class EntryFormAbility extends FormExtensionAbility {
       if (photo.url.length > 0) {
         const result: DownloadResult | null = await this.downloadImage(photo.url, key);
         if (result && result.fd >= 0) {
-          imageMap[result.path] = result.fd;
-          this.setPhotoField(data, key, result.path);
+          // formImages 的键是卡片使用的逻辑图片名；值才是文件描述符。
+          // 卡片端以 memory://photo0 的形式读取，不能把沙箱路径当作键。
+          imageMap[key] = result.fd;
+          this.setPhotoField(data, key, key);
         }
       }
       this.setPhotoDate(data, key, photo.date);
     }
 
     data.formImages = imageMap;
+    return data;
+  }
+
+  private closeFormImages(data: PhotoWidgetData): void {
+    if (!data.formImages) return;
+    const keys = Object.keys(data.formImages);
+    for (let i = 0; i < keys.length; i++) {
+      try {
+        fileIo.closeSync(data.formImages[keys[i]]);
+      } catch (_) {
+      }
+    }
+  }
+
+  private buildCachedData(photos: StoredPhoto[]): PhotoWidgetData {
+    const data = new PhotoWidgetData();
+    data.photoCount = photos.length;
+    data.lastUpdate = this.timeNow();
+    const imageMap: Record<string, number> = {};
+    const keys: string[] = ['photo0', 'photo1', 'photo2', 'photo3'];
+    for (let i = 0; i < Math.min(photos.length, 4); i++) {
+      const photo = photos[i];
+      const key = keys[i];
+      this.setPhotoDate(data, key, photo.date);
+      if (photo.url.startsWith('http://') || photo.url.startsWith('https://')) continue;
+      const result = this.openLocalImage(photo.url);
+      if (result && result.fd >= 0) {
+        imageMap[key] = result.fd;
+        this.retainedFormFds.push(result.fd);
+        this.setPhotoField(data, key, key);
+      }
+    }
+    data.formImages = imageMap;
+    data.hasPhotos = Object.keys(imageMap).length > 0 ? 1 : 0;
     return data;
   }
 
@@ -125,7 +185,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
       try {
         const result = await this.memoryRepository.list(this.context);
         console.info(`[Form] API: code=${result.code}`);
-        if (result.code === 0 && result.data) {
+        if (result.code === 200 && result.data) {
           const allMemories: Memory[] = result.data;
           const photoMemories: Memory[] = [];
           for (let j = 0; j < allMemories.length; j++) {
@@ -151,7 +211,11 @@ export default class EntryFormAbility extends FormExtensionAbility {
     const widgetData: PhotoWidgetData = await this.buildWithImages(photos);
     const imgCount = widgetData.formImages ? Object.keys(widgetData.formImages).length : 0;
     console.info(`[Form] Updating widget: count=${widgetData.photoCount} images=${imgCount}`);
-    formProvider.updateForm(formId, formBindingData.createFormBindingData(widgetData));
+    try {
+      await formProvider.updateForm(formId, formBindingData.createFormBindingData(widgetData));
+    } finally {
+      this.closeFormImages(widgetData);
+    }
 
     } catch (e) {
       console.error(`[Form] loadWidgetData FATAL: ${JSON.stringify(e)}`);
@@ -170,14 +234,7 @@ export default class EntryFormAbility extends FormExtensionAbility {
     // 同步加载缓存数据（onAddForm 必须同步返回）
     const photos: StoredPhoto[] = WidgetPhotoCache.loadSync(this.context);
     if (photos.length > 0) {
-      const data = new PhotoWidgetData();
-      data.photoCount = photos.length;
-      data.hasPhotos = 1;
-      data.lastUpdate = this.timeNow();
-      if (photos.length > 0 && photos[0]) { data.photo0 = photos[0].url; data.photo0Date = photos[0].date; }
-      if (photos.length > 1 && photos[1]) { data.photo1 = photos[1].url; data.photo1Date = photos[1].date; }
-      if (photos.length > 2 && photos[2]) { data.photo2 = photos[2].url; data.photo2Date = photos[2].date; }
-      if (photos.length > 3 && photos[3]) { data.photo3 = photos[3].url; data.photo3Date = photos[3].date; }
+      const data = this.buildCachedData(photos);
       console.info(`[Form] onAddForm: loaded ${photos.length} photos from cache`);
       return formBindingData.createFormBindingData(data);
     }
@@ -185,9 +242,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
     return formBindingData.createFormBindingData(new PhotoWidgetData());
   }
 
-  onFormVisible(formId: string): void {
-    console.info(`[Form] onFormVisible: formId=${formId}`);
-    this.loadWidgetData(formId);
+  onChangeFormVisibility(newStatus: Record<string, number>): void {
+    Object.keys(newStatus).forEach((formId: string) => {
+      if (newStatus[formId] === formInfo.VisibilityType.FORM_VISIBLE) {
+        console.info(`[Form] onChangeFormVisibility: visible formId=${formId}`);
+        this.loadWidgetData(formId);
+      }
+    });
   }
 
   onUpdateForm(formId: string, want?: Want): void {
@@ -208,6 +269,13 @@ export default class EntryFormAbility extends FormExtensionAbility {
   }
 
   onDestroy(): void {
+    for (let i = 0; i < this.retainedFormFds.length; i++) {
+      try {
+        fileIo.closeSync(this.retainedFormFds[i]);
+      } catch (_) {
+      }
+    }
+    this.retainedFormFds.length = 0;
     console.info('[Form] onDestroy');
   }
 }

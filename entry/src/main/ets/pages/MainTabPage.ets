@@ -2,15 +2,19 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { AppRoutes } from '../constants/AppRoutes';
 import { GardenBottomBar } from '../components/GardenBottomBar';
 import { VineTreeCanvas } from '../components/VineTreeCanvas';
+import { RecentPhotoCard } from '../components/RecentPhotoCard';
 import { Memory } from '../models/Memory';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
 import { TokenStorage } from '../services/TokenStorage';
+import { WidgetPhotoCache } from '../services/WidgetPhotoCache';
+import { ImagePreloader } from '../services/ImagePreloader';
 
 @Entry
 @Component
 struct MainTabPage {
   @State selectedIndex: number = 0;
   @State memories: Memory[] = [];
+  @State recentPhotos: Memory[] = [];
   @State seed: number = 1;
   private readonly memoryVm: MemoryViewModel = new MemoryViewModel();
 
@@ -21,6 +25,15 @@ struct MainTabPage {
     if (context === undefined) return;
     this.seed = await TokenStorage.getUserId(context);
     this.memories = await this.memoryVm.listMemories(context);
+    // 筛选最近照片用于卡片展示和 Widget 缓存
+    const photos = this.memories
+      .filter((m: Memory) => m.imageUrl && m.imageUrl.length > 0)
+      .sort((a: Memory, b: Memory) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    // 先生成 ArkUI 可直接读取的持久化 file URI，再同步给首页和服务卡片。
+    this.recentPhotos = await ImagePreloader.preloadPhotos(context, photos);
+    await WidgetPhotoCache.saveFromMemories(context, this.recentPhotos);
   }
 
   private open(route: string): void {
@@ -79,6 +92,11 @@ struct MainTabPage {
         }
         .width('100%').padding(20).borderRadius(20).backgroundColor($r('app.color.surface'))
         .border({ width: 1, color: $r('app.color.outline') })
+
+        RecentPhotoCard({
+          photos: this.recentPhotos,
+          onPhotoClick: (m: Memory): void => { this.openDetail(m.id) }
+        })
 
         Text('最近记忆').fontSize(20).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary')).width('100%')
         if (this.memories.length === 0) {

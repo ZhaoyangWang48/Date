@@ -14,4 +14,6 @@ export class ApiConfig {
   static readonly TREE_HOLES: string = '/api/tree-holes';
   static readonly IMAGE_UPLOAD: string = '/api/files/images';
   static readonly AGENT_CHAT: string = '/api/agent/rememberer/chat';
+  static readonly TIME_CAPSULES: string = '/api/time-capsules';
+  static readonly BOTTLES: string = '/api/bottles';
 }

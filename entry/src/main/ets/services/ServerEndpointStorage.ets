@@ -6,6 +6,9 @@ export class ServerEndpointStorage {
   private static readonly STORE_NAME: string = 'zhiyi_settings';
   private static readonly BASE_URL_KEY: string = 'base_url';
   private static readonly LEGACY_BASE_URLS: string[] = [
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:8080',
     'http://127.0.0.1:8080'
   ];
 

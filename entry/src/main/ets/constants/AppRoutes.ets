@@ -10,4 +10,8 @@ export class AppRoutes {
   static readonly SHARED_TREE: string = 'pages/SharedTreePage';
   static readonly MINE: string = 'pages/MinePage';
   static readonly TOOLBOX: string = 'pages/ToolboxPage';
+  static readonly TIME_CAPSULE_GARDEN: string = 'pages/TimeCapsuleGardenPage';
+  static readonly CAPSULE_OPEN: string = 'pages/CapsuleOpenPage';
+  static readonly MEMORY_RADIO: string = 'pages/MemoryRadioPage';
+  static readonly DRIFT_BOTTLE: string = 'pages/DriftBottlePage';
 }

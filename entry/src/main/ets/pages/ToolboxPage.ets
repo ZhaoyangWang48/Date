@@ -1,5 +1,6 @@
 import { ServerEndpointStorage } from '../services/ServerEndpointStorage';
 import { ApiConfig } from '../constants/ApiConfig';
+import { AppRoutes } from '../constants/AppRoutes';
 
 @Entry
 @Component
@@ -26,6 +27,10 @@ struct ToolboxPage {
     this.serverMessage = '已保存';
   }
 
+  private open(route: string): void {
+    this.getUIContext().getRouter().pushUrl({ url: route });
+  }
+
   build() {
     Scroll() {
       Column({ space: 16 }) {
@@ -43,15 +48,23 @@ struct ToolboxPage {
           }
         }
         .width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.surface')).border({ width: 1, color: $r('app.color.outline') })
-        Text('即将推出').fontSize(13).fontColor($r('app.color.text_secondary')).width('100%').margin({ top: 8 })
-        Column({ space: 8 }) {
-          Text('数据导出').fontSize(16).fontColor($r('app.color.text_primary'))
-          Text('回忆统计与主题设置将在后续版本提供。').fontSize(13).fontColor($r('app.color.text_secondary'))
-        }
-        .width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.surface')).border({ width: 1, color: $r('app.color.outline') })
+        Text('记忆实验室').fontSize(13).fontColor($r('app.color.text_secondary')).width('100%').margin({ top: 8 })
+        Column({ space: 10 }) {
+          this.feature('时光胶囊', '写给未来的自己，到期后开启与朗读。', AppRoutes.TIME_CAPSULE_GARDEN)
+          this.feature('记忆电台', '把个人记忆变成可以朗读的回忆频道。', AppRoutes.MEMORY_RADIO)
+          this.feature('漂流瓶', '匿名投入一句话，接住远方的共鸣。', AppRoutes.DRIFT_BOTTLE)
+        }.width('100%')
       }
       .alignItems(HorizontalAlign.Start).width('100%').padding({ left: 20, right: 20, top: 28, bottom: 28 })
     }
     .width('100%').height('100%').scrollBar(BarState.Off).backgroundColor($r('app.color.app_background'))
+  }
+
+  @Builder
+  private feature(title: string, description: string, route: string): void {
+    Row() {
+      Column({ space: 4 }) { Text(title).fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary')); Text(description).fontSize(13).fontColor($r('app.color.text_secondary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }); }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+      Text('›').fontSize(24).fontColor($r('app.color.primary'))
+    }.width('100%').padding(16).borderRadius(16).backgroundColor($r('app.color.surface')).border({ width: 1, color: $r('app.color.outline') }).onClick(() => { this.open(route); })
   }
 }

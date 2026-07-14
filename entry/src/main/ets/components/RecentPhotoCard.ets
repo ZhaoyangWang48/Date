@@ -52,6 +52,17 @@ export struct RecentPhotoCard {
           Row({ space: 10 }) {
             ForEach(this.photos, (memory: Memory, index: number) => {
               Stack({ alignContent: Alignment.BottomStart }) {
+                Column() {
+                  Text('叶')
+                    .fontSize(20)
+                    .fontColor($r('app.color.primary'))
+                    .opacity(0.24)
+                }
+                .width('100%')
+                .height('100%')
+                .justifyContent(FlexAlign.Center)
+                .backgroundColor($r('app.color.surface'))
+
                 Image(memory.imageUrl)
                   .width(120)
                   .height(150)
