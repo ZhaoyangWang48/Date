@@ -4,16 +4,21 @@ export struct GardenBottomBar {
   onSelected: (index: number) => void = () => {};
 
   @Builder
-  private navItem(index: number, icon: string, label: string): void {
-    Column({ space: 4 }) {
+  private navItem(index: number, icon: string, label: string, iconOffsetY: number = 0): void {
+    Column({ space: 2 }) {
       Text(icon)
-        .fontSize(19)
+        .fontSize(20)
         .fontColor(this.selectedIndex === index ? $r('app.color.primary') : $r('app.color.text_secondary'))
+        .textAlign(TextAlign.Center)
+        .offset({ x: 0, y: iconOffsetY })
       Text(label)
         .fontSize(10)
         .fontColor(this.selectedIndex === index ? $r('app.color.primary') : $r('app.color.text_secondary'))
+        .textAlign(TextAlign.Center)
     }
-    .width(60)
+    .width(64)
+    .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.Center)
     .onClick(() => { this.onSelected(index); })
   }
 
@@ -25,10 +30,10 @@ export struct GardenBottomBar {
       this.navItem(4, '◇', '工具箱')
     }
     .justifyContent(FlexAlign.SpaceAround)
-    .alignItems(VerticalAlign.Bottom)
+    .alignItems(VerticalAlign.Center)
     .width('100%')
-    .height(70)
-    .padding({ left: 12, right: 12, top: 12, bottom: 8 })
+    .height(64)
+    .padding({ top: 10, bottom: 6 })
     .border({ width: { top: 1 }, color: $r('app.color.outline') })
     .backgroundColor('#FDFCFAF2')
   }

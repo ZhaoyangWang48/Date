@@ -12,6 +12,7 @@ const TAG = 'ZhiyiEntryAbility';
 
 export default class EntryAbility extends UIAbility {
   private contentLoaded: boolean = false;
+  private windowStage: window.WindowStage | null = null;
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     try {
@@ -36,16 +37,41 @@ export default class EntryAbility extends UIAbility {
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
-    ServerEndpointStorage.load(this.context).then(() => TokenStorage.hasToken(this.context)).then((hasToken: boolean) => {
-      this.loadPage(windowStage, hasToken ? AppRoutes.HOME : AppRoutes.LOGIN);
+    this.windowStage = windowStage;
+
+    // 立即加载启动页，避免白屏
+    windowStage.loadContent(AppRoutes.SPLASH, (error) => {
+      if (error.code) {
+        hilog.error(DOMAIN, TAG, 'Failed to load splash page. Cause: %{public}s', JSON.stringify(error));
+      }
+    });
+
+    // 后台探测服务器
+    const startMs: number = Date.now();
+    ServerEndpointStorage.probeAndSelect(this.context).then((endpoint: string) => {
+      if (endpoint.length === 0) {
+        hilog.warn(DOMAIN, TAG, 'All server probes failed, using default');
+      } else {
+        hilog.info(DOMAIN, TAG, `Server selected: ${endpoint}`);
+      }
+      return TokenStorage.hasToken(this.context);
+    }).then((hasToken: boolean) => {
+      // 保证启动页至少显示 600ms
+      const elapsed: number = Date.now() - startMs;
+      const remaining: number = elapsed < 600 ? (600 - elapsed) : 0;
+      setTimeout(() => {
+        const target = hasToken ? AppRoutes.HOME : AppRoutes.LOGIN;
+        this.replacePage(target);
+      }, remaining);
     }).catch((error: Error) => {
       hilog.error(DOMAIN, TAG, 'Failed to read token. Cause: %{public}s', JSON.stringify(error));
-      this.loadPage(windowStage, AppRoutes.LOGIN);
+      this.replacePage(AppRoutes.LOGIN);
     });
   }
 
   onWindowStageDestroy(): void {
     hilog.info(DOMAIN, TAG, 'Window stage destroyed');
+    this.windowStage = null;
   }
 
   onForeground(): void {
@@ -59,16 +85,24 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN, TAG, 'Application backgrounded');
   }
 
-  private loadPage(windowStage: window.WindowStage, route: string): void {
-    windowStage.loadContent(route, (error) => {
-      if (error.code) {
-        hilog.error(DOMAIN, TAG, 'Failed to load page. Cause: %{public}s', JSON.stringify(error));
-        return;
-      }
-      this.contentLoaded = true;
-      this.startCapsuleReminders();
-      hilog.info(DOMAIN, TAG, 'Initial page loaded');
-    });
+  private replacePage(route: string): void {
+    if (this.windowStage === null) {
+      hilog.error(DOMAIN, TAG, 'windowStage is null, cannot navigate to %{public}s', route);
+      return;
+    }
+    try {
+      this.windowStage.loadContent(route, (error) => {
+        if (error.code) {
+          hilog.error(DOMAIN, TAG, 'Failed to navigate to %{public}s. Cause: %{public}s', route, JSON.stringify(error));
+          return;
+        }
+        this.contentLoaded = true;
+        this.startCapsuleReminders();
+        hilog.info(DOMAIN, TAG, 'Page loaded: %{public}s', route);
+      });
+    } catch (error) {
+      hilog.error(DOMAIN, TAG, 'Failed to navigate. Cause: %{public}s', JSON.stringify(error));
+    }
   }
 
   private async startCapsuleReminders(): Promise<void> {

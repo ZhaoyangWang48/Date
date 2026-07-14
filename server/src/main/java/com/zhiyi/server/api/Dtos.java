@@ -27,12 +27,20 @@ public final class Dtos {
     public static MemoryResponse from(MemoryEntity memory) { return new MemoryResponse(memory.getId(), memory.getAuthor().getId(), memory.getAuthor().getNickname(), memory.getTreeHole() == null ? 0L : memory.getTreeHole().getId(), memory.getContent(), memory.getImageUrl() == null ? "" : memory.getImageUrl(), memory.getMood(), memory.getMemoryDate(), memory.getMemoryHour(), memory.getCreatedAt()); }
   }
   public record ImageUploadResponse(String imageUrl) { }
+  public record ImageOptimizeResponse(String imageUrl, boolean optimized) { }
+  public record SmartEnhanceResponse(String imageUrl, String analysis) { }
+  public record MemoryDraftRequest(@NotBlank @Size(max = 500) String imageUrl, @NotNull LocalDateTime capturedAt) { }
+  public record MemoryDraftResponse(String content) { }
   public record AgentChatRequest(@NotNull Long treeHoleId, @NotBlank @Size(max = 500) String question) { }
   public record AgentSourceCitation(Long memoryId, String contentSnippet, LocalDate date, String authorName) { }
   public record AgentChatResponse(String answer, java.util.List<AgentSourceCitation> sources) { }
   public record CreateTimeCapsuleRequest(@NotBlank @Size(max = 10000) String content, @NotBlank @Size(max = 30) String mood, LocalDateTime openAt, LocalDate openDate) { }
   public record TimeCapsuleResponse(Long id, Long authorId, String authorName, String content, String mood, LocalDate sealDate, LocalDate openDate, LocalDateTime openAt, LocalDate actualOpenDate, boolean isOpened) {
-    public static TimeCapsuleResponse from(TimeCapsuleEntity capsule) { return new TimeCapsuleResponse(capsule.getId(), capsule.getAuthor().getId(), capsule.getAuthor().getNickname(), capsule.getContent(), capsule.getMood(), capsule.getSealDate(), capsule.getOpenDate(), capsule.getOpenAt(), capsule.getActualOpenDate(), capsule.isOpened()); }
+    public static TimeCapsuleResponse from(TimeCapsuleEntity capsule) {
+      // 正文只能在服务端确认开启后离开安全边界，不能依赖客户端隐藏。
+      String visibleContent = capsule.isOpened() ? capsule.getContent() : "";
+      return new TimeCapsuleResponse(capsule.getId(), capsule.getAuthor().getId(), capsule.getAuthor().getNickname(), visibleContent, capsule.getMood(), capsule.getSealDate(), capsule.getOpenDate(), capsule.getOpenAt(), capsule.getActualOpenDate(), capsule.isOpened());
+    }
   }
   public record ThrowBottleRequest(Long memoryId, @Size(max = 10000) String content, @NotBlank @Size(max = 30) String mood) { }
   public record SendResonanceRequest(@NotBlank @Size(max = 30) String mood) { }
@@ -44,4 +52,14 @@ public final class Dtos {
     public static ResonanceLeafResponse from(BottleResonanceEntity resonance) { String content = resonance.getBottle().getContent(); String snippet = content.length() > 36 ? content.substring(0, 36) + "…" : content; return new ResonanceLeafResponse(resonance.getId(), resonance.getBottle().getId(), resonance.getMood(), resonance.getCreatedAt(), snippet); }
   }
   public record BottlePickupCountResponse(long count) { }
+  public record GenerateRecallCardRequest(Long treeHoleId) { }
+  public record RecallCardResponse(Long id, Long userId, Long treeHoleId, String title, String summary, String moodTags, String representativeImageUrl, LocalDate timeRangeStart, LocalDate timeRangeEnd, int memoryCount, LocalDateTime createdAt) {
+    public static RecallCardResponse from(RecallCardEntity card) {
+      return new RecallCardResponse(card.getId(), card.getUser().getId(),
+          card.getTreeHole() == null ? null : card.getTreeHole().getId(),
+          card.getTitle(), card.getSummary(), card.getMoodTags(),
+          card.getRepresentativeImageUrl(), card.getTimeRangeStart(),
+          card.getTimeRangeEnd(), card.getMemoryCount(), card.getCreatedAt());
+    }
+  }
 }

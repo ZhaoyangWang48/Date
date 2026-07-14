@@ -36,6 +36,11 @@ export class TreeGrowthEngine {
   static readonly WIDTH: number = 320;
   static readonly HEIGHT: number = 430;
   private static readonly GOLDEN_ANGLE: number = 2.399963229728653;
+  // 第一片叶子与预设主茎顶端相距约 110–122px；吸引半径必须覆盖这段距离，
+  // 否则只有一片叶子时，生长算法找不到目标，主茎会停在画布中部。
+  private static readonly ATTRACTION_RADIUS: number = 140;
+  private static readonly ATTACH_DISTANCE: number = 15;
+  private static readonly MAX_BRANCH_DEPTH: number = 12;
 
   static create(memories: Memory[], seed: number): TreeGrowthSnapshot {
     const snapshot = new TreeGrowthSnapshot();
@@ -113,13 +118,15 @@ export class TreeGrowthEngine {
       for (let targetIndex = 0; targetIndex < active.length; targetIndex += 1) {
         const target = targets[active[targetIndex]];
         let nearest = -1;
-        let nearestDistance = 92 * 92;
+        let nearestDistance = TreeGrowthEngine.ATTRACTION_RADIUS * TreeGrowthEngine.ATTRACTION_RADIUS;
         for (let branchIndex = 0; branchIndex < branches.length; branchIndex += 1) {
           const branch = branches[branchIndex];
           const dx = target.x - branch.x;
           const dy = target.y - branch.y;
           const distance = dx * dx + dy * dy;
-          if (distance < 15 * 15) { target.attachedBranchId = branch.id; nearest = -1; break; }
+          if (distance < TreeGrowthEngine.ATTACH_DISTANCE * TreeGrowthEngine.ATTACH_DISTANCE) {
+            target.attachedBranchId = branch.id; nearest = -1; break;
+          }
           if (distance < nearestDistance && branch.children < 3) { nearest = branchIndex; nearestDistance = distance; }
         }
         if (nearest >= 0) {
@@ -133,7 +140,7 @@ export class TreeGrowthEngine {
       let added = 0;
       const originalLength = branches.length;
       for (let index = 0; index < originalLength; index += 1) {
-        if (count[index] === 0 || branches[index].depth > 10) continue;
+        if (count[index] === 0 || branches[index].depth >= TreeGrowthEngine.MAX_BRANCH_DEPTH) continue;
         const branch = branches[index];
         const vectorLength = Math.sqrt(sumX[index] * sumX[index] + sumY[index] * sumY[index]);
         const segment = Math.max(10, 17 - branch.depth * 0.7);
