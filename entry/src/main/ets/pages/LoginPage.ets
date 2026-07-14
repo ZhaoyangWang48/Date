@@ -1,6 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { AppRoutes } from '../constants/AppRoutes';
 import { AuthViewModel } from '../viewmodels/AuthViewModel';
+import { CapsuleReminderService } from '../services/CapsuleReminderService';
 
 @Entry
 @Component
@@ -26,6 +27,7 @@ struct LoginPage {
       this.message = result.message;
       return;
     }
+    CapsuleReminderService.start(context);
     this.replacePage(AppRoutes.HOME);
   }
 

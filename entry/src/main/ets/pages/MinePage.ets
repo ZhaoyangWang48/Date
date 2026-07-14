@@ -1,6 +1,7 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { AppRoutes } from '../constants/AppRoutes';
 import { TokenStorage } from '../services/TokenStorage';
+import { CapsuleReminderService } from '../services/CapsuleReminderService';
 
 @Entry
 @Component
@@ -25,6 +26,7 @@ struct MinePage {
     if (context === undefined) return;
     try {
       await TokenStorage.clearSession(context);
+      CapsuleReminderService.stop();
       this.getUIContext().getRouter().replaceUrl({ url: AppRoutes.LOGIN }, (_error: BusinessError) => {});
     } catch (_error) { this.message = '退出失败，请重试'; }
   }

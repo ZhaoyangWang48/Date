@@ -38,3 +38,20 @@ export class AgentChatRequestBody {
   question: string = '';
   constructor(treeHoleId: number, question: string) { this.treeHoleId = treeHoleId; this.question = question; }
 }
+
+export class CreateTimeCapsuleRequestBody {
+  content: string = ''; mood: string = 'calm'; openAt: string = '';
+  constructor(content: string, mood: string, openAt: string) { this.content = content; this.mood = mood; this.openAt = openAt; }
+}
+
+export class ThrowBottleRequestBody {
+  memoryId: number = 0; content: string = ''; mood: string = 'calm';
+  constructor(memoryId: number, content: string, mood: string) { this.memoryId = memoryId; this.content = content; this.mood = mood; }
+}
+
+export class SendResonanceRequestBody {
+  mood: string = 'moved';
+  constructor(mood: string) { this.mood = mood; }
+}
+
+export class EmptyRequestBody { }

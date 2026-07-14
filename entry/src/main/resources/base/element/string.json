@@ -27,6 +27,14 @@
     {
       "name": "EntryFormAbility_label",
       "value": "最近照片卡片"
+    },
+    {
+      "name": "notification_reason",
+      "value": "用于在时光胶囊到期时提醒用户"
+    },
+    {
+      "name": "microphone_reason",
+      "value": "用于把写给未来的话实时转换成文字"
     }
   ]
 }

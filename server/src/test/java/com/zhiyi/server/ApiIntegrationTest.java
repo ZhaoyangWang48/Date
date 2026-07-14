@@ -3,16 +3,23 @@ package com.zhiyi.server;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -20,6 +27,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ApiIntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
+  @MockitoBean Clock clock;
+  private static final Instant TEST_NOW = Instant.parse("2026-07-14T09:00:00Z");
+  private static final ZoneId TEST_ZONE = ZoneId.of("Asia/Hong_Kong");
+
+  @BeforeEach void resetClock() {
+    when(clock.instant()).thenReturn(TEST_NOW);
+    when(clock.getZone()).thenReturn(TEST_ZONE);
+  }
 
   @Test void protectsTreeHoleMemoriesAndGroupsCommonDayByTree() throws Exception {
     String alice = register("alice", "Alice");
@@ -90,6 +105,67 @@ class ApiIntegrationTest {
     mvc.perform(multipart("/api/files/images").file(wrongField).header("Authorization", token))
       .andExpect(status().isBadRequest())
       .andExpect(jsonPath("$.code").value(400));
+  }
+
+  @Test void protectsTimeCapsulesUntilTheirOpenTimeAndOpensAfterOneMinute() throws Exception {
+    String owner = register("capsuleowner", "胶囊主人");
+    String visitor = register("capsulevisitor", "访客");
+    String openAt = LocalDateTime.ofInstant(TEST_NOW, TEST_ZONE).plusMinutes(1).toString();
+
+    String body = mvc.perform(post("/api/time-capsules").header("Authorization", owner)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"content\":\"一分钟后的我，请记得今天的勇气\",\"mood\":\"calm\",\"openAt\":\"" + openAt + "\"}"))
+      .andExpect(status().isCreated())
+      .andExpect(jsonPath("$.code").value(200))
+      .andExpect(jsonPath("$.data.openAt").value(openAt + ":00"))
+      .andReturn().getResponse().getContentAsString();
+    long capsuleId = json.readTree(body).path("data").path("id").asLong();
+
+    mvc.perform(get("/api/time-capsules").header("Authorization", owner))
+      .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].id").value(capsuleId));
+    mvc.perform(get("/api/time-capsules/{id}", capsuleId).header("Authorization", visitor))
+      .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value(403));
+    mvc.perform(patch("/api/time-capsules/{id}/open", capsuleId).header("Authorization", owner))
+      .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value(409));
+
+    when(clock.instant()).thenReturn(TEST_NOW.plusSeconds(61));
+    mvc.perform(patch("/api/time-capsules/{id}/open", capsuleId).header("Authorization", owner))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.code").value(200))
+      .andExpect(jsonPath("$.data.isOpened").value(true));
+  }
+
+  @Test void keepsDriftBottleAnonymousAndRequiresPickupBeforeResonance() throws Exception {
+    String author = register("bottleauthor", "投瓶人");
+    String picker = register("bottlepicker", "捞瓶人");
+
+    String body = mvc.perform(post("/api/bottles").header("Authorization", author)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"content\":\"今天的风很温柔，愿你也被好好拥抱。\",\"mood\":\"hopeful\"}"))
+      .andExpect(status().isCreated()).andExpect(jsonPath("$.code").value(200))
+      .andReturn().getResponse().getContentAsString();
+    long bottleId = json.readTree(body).path("data").path("id").asLong();
+
+    mvc.perform(post("/api/bottles/{id}/resonance", bottleId).header("Authorization", picker)
+        .contentType(MediaType.APPLICATION_JSON).content("{\"mood\":\"warm\"}"))
+      .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value(403));
+
+    mvc.perform(get("/api/bottles/random").header("Authorization", picker))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.data.id").value(bottleId))
+      .andExpect(jsonPath("$.data.content").value("今天的风很温柔，愿你也被好好拥抱。"));
+
+    mvc.perform(post("/api/bottles/{id}/resonance", bottleId).header("Authorization", picker)
+        .contentType(MediaType.APPLICATION_JSON).content("{\"mood\":\"warm\"}"))
+      .andExpect(status().isCreated()).andExpect(jsonPath("$.code").value(200));
+    mvc.perform(post("/api/bottles/{id}/resonance", bottleId).header("Authorization", picker)
+        .contentType(MediaType.APPLICATION_JSON).content("{\"mood\":\"warm\"}"))
+      .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value(409));
+
+    mvc.perform(get("/api/bottles/mine/resonances").header("Authorization", author))
+      .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].bottleId").value(bottleId));
+    mvc.perform(get("/api/bottles/pickup-count").header("Authorization", picker))
+      .andExpect(status().isOk()).andExpect(jsonPath("$.data.count").value(1));
   }
 
   private String register(String username, String nickname) throws Exception {

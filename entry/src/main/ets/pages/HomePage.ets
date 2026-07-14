@@ -6,6 +6,7 @@ import { HomeFeature } from '../models/HomeFeature';
 import { HomeViewModel } from '../viewmodels/HomeViewModel';
 import { MemoryViewModel } from '../viewmodels/MemoryViewModel';
 import { WidgetPhotoCache } from '../services/WidgetPhotoCache';
+import { ImagePreloader } from '../services/ImagePreloader';
 
 @Entry
 @Component
@@ -20,13 +21,15 @@ struct HomePage {
 
   private async loadRecentPhotos(): Promise<void> {
     try {
-      const memories = await this.memoryViewModel.listMemories(getContext(this));
-      this.recentPhotos = memories
+      const context = this.getUIContext().getHostContext();
+      if (context === undefined) return;
+      const memories = await this.memoryViewModel.listMemories(context);
+      const photos = memories
         .filter((m: Memory) => m.imageUrl && m.imageUrl.length > 0)
         .sort((a: Memory, b: Memory) => b.createdAt.localeCompare(a.createdAt))
         .slice(0, 10);
-      // 同步写入卡片缓存，供桌面 Widget 读取
-      await WidgetPhotoCache.saveFromMemories(getContext(this), this.recentPhotos);
+      this.recentPhotos = await ImagePreloader.preloadPhotos(context, photos);
+      await WidgetPhotoCache.saveFromMemories(context, this.recentPhotos);
     } catch (err) {
       console.error('Failed to load recent photos:', JSON.stringify(err));
     }

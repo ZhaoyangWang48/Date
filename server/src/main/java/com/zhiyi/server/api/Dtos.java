@@ -30,4 +30,18 @@ public final class Dtos {
   public record AgentChatRequest(@NotNull Long treeHoleId, @NotBlank @Size(max = 500) String question) { }
   public record AgentSourceCitation(Long memoryId, String contentSnippet, LocalDate date, String authorName) { }
   public record AgentChatResponse(String answer, java.util.List<AgentSourceCitation> sources) { }
+  public record CreateTimeCapsuleRequest(@NotBlank @Size(max = 10000) String content, @NotBlank @Size(max = 30) String mood, LocalDateTime openAt, LocalDate openDate) { }
+  public record TimeCapsuleResponse(Long id, Long authorId, String authorName, String content, String mood, LocalDate sealDate, LocalDate openDate, LocalDateTime openAt, LocalDate actualOpenDate, boolean isOpened) {
+    public static TimeCapsuleResponse from(TimeCapsuleEntity capsule) { return new TimeCapsuleResponse(capsule.getId(), capsule.getAuthor().getId(), capsule.getAuthor().getNickname(), capsule.getContent(), capsule.getMood(), capsule.getSealDate(), capsule.getOpenDate(), capsule.getOpenAt(), capsule.getActualOpenDate(), capsule.isOpened()); }
+  }
+  public record ThrowBottleRequest(Long memoryId, @Size(max = 10000) String content, @NotBlank @Size(max = 30) String mood) { }
+  public record SendResonanceRequest(@NotBlank @Size(max = 30) String mood) { }
+  public record DriftBottleResponse(Long id, String content, String mood, LocalDateTime throwTime, LocalDateTime expireTime, boolean isPickedUp, long resonanceCount) {
+    public static DriftBottleResponse from(DriftBottleEntity bottle, long resonanceCount) { return new DriftBottleResponse(bottle.getId(), bottle.getContent(), bottle.getMood(), bottle.getThrownAt(), bottle.getExpireAt(), false, resonanceCount); }
+    public static DriftBottleResponse anonymous(DriftBottleEntity bottle) { return new DriftBottleResponse(bottle.getId(), bottle.getContent(), bottle.getMood(), bottle.getThrownAt(), bottle.getExpireAt(), true, 0); }
+  }
+  public record ResonanceLeafResponse(Long id, Long bottleId, String mood, LocalDateTime timestamp, String bottleContentSnippet) {
+    public static ResonanceLeafResponse from(BottleResonanceEntity resonance) { String content = resonance.getBottle().getContent(); String snippet = content.length() > 36 ? content.substring(0, 36) + "…" : content; return new ResonanceLeafResponse(resonance.getId(), resonance.getBottle().getId(), resonance.getMood(), resonance.getCreatedAt(), snippet); }
+  }
+  public record BottlePickupCountResponse(long count) { }
 }

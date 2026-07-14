@@ -4,11 +4,15 @@ import { window } from '@kit.ArkUI';
 import { AppRoutes } from '../constants/AppRoutes';
 import { TokenStorage } from '../services/TokenStorage';
 import { ServerEndpointStorage } from '../services/ServerEndpointStorage';
+import { SpeechInputService } from '../services/SpeechInputService';
+import { CapsuleReminderService } from '../services/CapsuleReminderService';
 
 const DOMAIN = 0x0000;
 const TAG = 'ZhiyiEntryAbility';
 
 export default class EntryAbility extends UIAbility {
+  private contentLoaded: boolean = false;
+
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     try {
       this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
@@ -19,7 +23,16 @@ export default class EntryAbility extends UIAbility {
   }
 
   onDestroy(): void {
+    SpeechInputService.cancel();
+    CapsuleReminderService.stop();
     hilog.info(DOMAIN, TAG, 'Application destroyed');
+  }
+
+  onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
+    const targetRoute = want.parameters?.['targetRoute'] as string;
+    if (targetRoute && targetRoute.length > 0) {
+      AppStorage.setOrCreate('notify_target_route', targetRoute);
+    }
   }
 
   onWindowStageCreate(windowStage: window.WindowStage): void {
@@ -36,10 +49,13 @@ export default class EntryAbility extends UIAbility {
   }
 
   onForeground(): void {
+    if (this.contentLoaded) this.startCapsuleReminders();
     hilog.info(DOMAIN, TAG, 'Application foregrounded');
   }
 
   onBackground(): void {
+    SpeechInputService.cancel();
+    CapsuleReminderService.stop();
     hilog.info(DOMAIN, TAG, 'Application backgrounded');
   }
 
@@ -49,7 +65,15 @@ export default class EntryAbility extends UIAbility {
         hilog.error(DOMAIN, TAG, 'Failed to load page. Cause: %{public}s', JSON.stringify(error));
         return;
       }
+      this.contentLoaded = true;
+      this.startCapsuleReminders();
       hilog.info(DOMAIN, TAG, 'Initial page loaded');
     });
+  }
+
+  private async startCapsuleReminders(): Promise<void> {
+    if (await TokenStorage.hasToken(this.context)) {
+      CapsuleReminderService.start(this.context);
+    }
   }
 }

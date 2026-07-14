@@ -20,10 +20,10 @@ export class WidgetPhotoCache {
 
   /**
    * 获取同步缓存文件的路径。
-   * 使用 cacheDir，主 App 和 FormExtension 可访问同一沙箱。
+   * 使用 filesDir，主 App 和 FormExtension 可访问同一沙箱，且不会因缓存回收丢失。
    */
   static getSyncFilePath(context: Context): string {
-    return `${context.cacheDir}/${WidgetPhotoCache.SYNC_FILE_NAME}`;
+    return `${context.filesDir}/${WidgetPhotoCache.SYNC_FILE_NAME}`;
   }
 
   /**
@@ -50,7 +50,10 @@ export class WidgetPhotoCache {
   static loadSync(context: Context): StoredPhoto[] {
     try {
       const path = WidgetPhotoCache.getSyncFilePath(context);
-      if (!fileIo.accessSync(path)) {
+      try {
+        // fileIo.accessSync 成功时没有返回值，文件不存在时会抛出异常。
+        fileIo.accessSync(path);
+      } catch (_) {
         console.info('[WidgetCache] Sync file not found');
         return [];
       }
