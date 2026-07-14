@@ -1,7 +1,7 @@
 {
   "layered-image":
   {
-    "background" : "$media:background",
-    "foreground" : "$media:foreground"
+    "background" : "$media:zhiyi_logo_background",
+    "foreground" : "$media:zhiyi_logo"
   }
 }
