@@ -129,7 +129,7 @@ struct TimeCapsuleGardenPage {
           ForEach(this.capsules, (capsule: TimeCapsule) => {
             Row({ space: 14 }) {
               Text(capsule.isOpened ? '✦' : capsule.isReady(this.now) ? '◉' : '●').fontSize(25).fontColor(capsule.isOpened || capsule.isReady(this.now) ? '#C99B3F' : '#9B8354')
-              Column({ space: 4 }) { Text(capsule.isOpened ? '已开启的胶囊' : capsule.isReady(this.now) ? '等待开启' : '埋在时光里的信').fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary')); Text(capsule.remainingText(this.now)).fontSize(13).fontColor($r('app.color.text_secondary')); Text(capsule.content).fontSize(13).fontColor($r('app.color.text_secondary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }); }.alignItems(HorizontalAlign.Start).layoutWeight(1)
+              Column({ space: 4 }) { Text(capsule.isOpened ? '已开启的胶囊' : capsule.isReady(this.now) ? '等待开启' : '埋在时光里的信').fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary')); Text(capsule.remainingText(this.now)).fontSize(13).fontColor($r('app.color.text_secondary')); Text(capsule.displayContent()).fontSize(13).fontColor($r('app.color.text_secondary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }); }.alignItems(HorizontalAlign.Start).layoutWeight(1)
               Text('›').fontSize(24).fontColor($r('app.color.primary'))
             }.width('100%').padding(16).borderRadius(18).backgroundColor($r('app.color.surface')).border({ width: 1, color: $r('app.color.outline') }).onClick(() => { this.open(capsule); })
           }, (capsule: TimeCapsule) => capsule.id.toString())

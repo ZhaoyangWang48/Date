@@ -36,7 +36,11 @@ public final class Dtos {
   public record AgentChatResponse(String answer, java.util.List<AgentSourceCitation> sources) { }
   public record CreateTimeCapsuleRequest(@NotBlank @Size(max = 10000) String content, @NotBlank @Size(max = 30) String mood, LocalDateTime openAt, LocalDate openDate) { }
   public record TimeCapsuleResponse(Long id, Long authorId, String authorName, String content, String mood, LocalDate sealDate, LocalDate openDate, LocalDateTime openAt, LocalDate actualOpenDate, boolean isOpened) {
-    public static TimeCapsuleResponse from(TimeCapsuleEntity capsule) { return new TimeCapsuleResponse(capsule.getId(), capsule.getAuthor().getId(), capsule.getAuthor().getNickname(), capsule.getContent(), capsule.getMood(), capsule.getSealDate(), capsule.getOpenDate(), capsule.getOpenAt(), capsule.getActualOpenDate(), capsule.isOpened()); }
+    public static TimeCapsuleResponse from(TimeCapsuleEntity capsule) {
+      // 正文只能在服务端确认开启后离开安全边界，不能依赖客户端隐藏。
+      String visibleContent = capsule.isOpened() ? capsule.getContent() : "";
+      return new TimeCapsuleResponse(capsule.getId(), capsule.getAuthor().getId(), capsule.getAuthor().getNickname(), visibleContent, capsule.getMood(), capsule.getSealDate(), capsule.getOpenDate(), capsule.getOpenAt(), capsule.getActualOpenDate(), capsule.isOpened());
+    }
   }
   public record ThrowBottleRequest(Long memoryId, @Size(max = 10000) String content, @NotBlank @Size(max = 30) String mood) { }
   public record SendResonanceRequest(@NotBlank @Size(max = 30) String mood) { }

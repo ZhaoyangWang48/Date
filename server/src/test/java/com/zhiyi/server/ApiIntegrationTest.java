@@ -30,6 +30,7 @@ class ApiIntegrationTest {
   @MockitoBean Clock clock;
   private static final Instant TEST_NOW = Instant.parse("2026-07-14T09:00:00Z");
   private static final ZoneId TEST_ZONE = ZoneId.of("Asia/Hong_Kong");
+  private static final String CAPSULE_SECRET = "一分钟后的我，请记得今天的勇气";
 
   @BeforeEach void resetClock() {
     when(clock.instant()).thenReturn(TEST_NOW);
@@ -114,15 +115,21 @@ class ApiIntegrationTest {
 
     String body = mvc.perform(post("/api/time-capsules").header("Authorization", owner)
         .contentType(MediaType.APPLICATION_JSON)
-        .content("{\"content\":\"一分钟后的我，请记得今天的勇气\",\"mood\":\"calm\",\"openAt\":\"" + openAt + "\"}"))
+        .content("{\"content\":\"" + CAPSULE_SECRET + "\",\"mood\":\"calm\",\"openAt\":\"" + openAt + "\"}"))
       .andExpect(status().isCreated())
       .andExpect(jsonPath("$.code").value(200))
       .andExpect(jsonPath("$.data.openAt").value(openAt + ":00"))
+      .andExpect(jsonPath("$.data.content").value(""))
       .andReturn().getResponse().getContentAsString();
     long capsuleId = json.readTree(body).path("data").path("id").asLong();
 
     mvc.perform(get("/api/time-capsules").header("Authorization", owner))
-      .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].id").value(capsuleId));
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.data[0].id").value(capsuleId))
+      .andExpect(jsonPath("$.data[0].content").value(""));
+    mvc.perform(get("/api/time-capsules/{id}", capsuleId).header("Authorization", owner))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.data.content").value(""));
     mvc.perform(get("/api/time-capsules/{id}", capsuleId).header("Authorization", visitor))
       .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value(403));
     mvc.perform(patch("/api/time-capsules/{id}/open", capsuleId).header("Authorization", owner))
@@ -132,7 +139,12 @@ class ApiIntegrationTest {
     mvc.perform(patch("/api/time-capsules/{id}/open", capsuleId).header("Authorization", owner))
       .andExpect(status().isOk())
       .andExpect(jsonPath("$.code").value(200))
-      .andExpect(jsonPath("$.data.isOpened").value(true));
+      .andExpect(jsonPath("$.data.isOpened").value(true))
+      .andExpect(jsonPath("$.data.content").value(CAPSULE_SECRET));
+    mvc.perform(get("/api/time-capsules/{id}", capsuleId).header("Authorization", owner))
+      .andExpect(status().isOk())
+      .andExpect(jsonPath("$.data.isOpened").value(true))
+      .andExpect(jsonPath("$.data.content").value(CAPSULE_SECRET));
   }
 
   @Test void keepsDriftBottleAnonymousAndRequiresPickupBeforeResonance() throws Exception {
