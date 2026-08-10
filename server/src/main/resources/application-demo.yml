@@ -1,4 +1,4 @@
-# 仅用于未配置 MySQL 时的真机联调。数据保存在当前用户目录，重启后仍可保留。
+# Local H2 profile. ZHIYI_JWT_SECRET is still required.
 spring:
   datasource:
     url: "jdbc:h2:file:${user.home}/.zhiyi/demo;MODE=MySQL;AUTO_SERVER=TRUE;DATABASE_TO_LOWER=TRUE"
@@ -10,6 +10,3 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
-zhiyi:
-  demo:
-    seed-enabled: true

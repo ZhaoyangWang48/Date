@@ -11,3 +11,13 @@
 **/.test
 /.appanalyzer
 /.vs
+/.claude
+.env
+.env.*
+*.log
+*.sqlite
+*.pptx
+*.potx
+*.pdf
+/report_work
+/uploads

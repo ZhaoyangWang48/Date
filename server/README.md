@@ -4,7 +4,7 @@
 
 - Java 21、Maven 3.9+、MySQL 8
 - Spring Boot 3.5、Flyway、Spring Security JWT
-- 服务默认监听 `0.0.0.0:8080`，Swagger：`http://localhost:8080/swagger-ui.html`
+- 服务默认仅监听 `127.0.0.1:8080`，Swagger：`http://localhost:8080/swagger-ui.html`
 
 ## 首次启动
 
@@ -19,11 +19,12 @@ $env:ZHIYI_JWT_SECRET='至少32位的随机字符串，请不要使用示例值'
 mvn spring-boot:run
 ```
 
-Flyway 会自动建表；开发环境第一次启动还会创建：`zhiyi / REMOVED_SECRET`、`xiaoman / REMOVED_SECRET`、邀请码为 `REMOVED_SECRET` 的“午后树洞”。演示完成后请更改或移除这些测试账号。
+Flyway 会自动建表。项目不会自动创建用户、密码或邀请码；请通过客户端或注册接口创建测试账号。
 
 若暂时没有 MySQL 账号，可先启动不影响 MySQL 配置的本机演示数据库：
 
 ```powershell
+$env:ZHIYI_JWT_SECRET='至少32位的随机字符串，请不要使用示例值'
 mvn spring-boot:run "-Dspring-boot.run.profiles=demo"
 ```
 
@@ -31,10 +32,11 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=demo"
 
 ## 真机联调
 
-1. 手机和电脑连接同一 Wi‑Fi；在 PowerShell 运行 `ipconfig`，找到电脑 IPv4。
-2. 将 `entry/src/main/ets/constants/ApiConfig.ets` 的 `BASE_URL` 改为 `http://你的IPv4:8080`。
-3. 允许 Windows 防火墙的专用网络访问 TCP 8080；重新编译并安装鸿蒙 App。
-4. 先用演示账号登录、发布文字；确认成功后再选择图片验证上传与回显。
+1. 手机和电脑连接同一可信专用网络；在 PowerShell 运行 `ipconfig`，找到电脑 IPv4。
+2. 显式设置 `$env:ZHIYI_SERVER_ADDRESS='0.0.0.0'`，只在联调期间开放监听。
+3. 在应用的服务器设置页面输入联调地址，不要把具体主机地址提交到源码。
+4. 允许 Windows 防火墙的专用网络访问 TCP 8080；重新编译并安装鸿蒙 App。
+5. 注册临时测试账号进行验证，联调完成后关闭服务并清理测试数据。
 
 ## 验证
 

@@ -4,7 +4,7 @@ spring:
   datasource:
     url: ${ZHIYI_DB_URL:jdbc:mysql://127.0.0.1:3306/zhiyi?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${ZHIYI_DB_USERNAME:zhiyi_app}
-    password: ${ZHIYI_DB_PASSWORD:REMOVED_SECRET}
+    password: ${ZHIYI_DB_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
@@ -17,16 +17,14 @@ spring:
       max-request-size: 12MB
 server:
   port: ${PORT:8080}
-  address: 0.0.0.0
+  address: ${ZHIYI_SERVER_ADDRESS:127.0.0.1}
 zhiyi:
   jwt:
-    # 至少 32 字符；请通过环境变量 ZHIYI_JWT_SECRET 覆盖。
-    secret: ${ZHIYI_JWT_SECRET:REMOVED_SECRET}
+    # Required: provide at least 32 random characters through the environment.
+    secret: ${ZHIYI_JWT_SECRET}
     expiration-days: 7
   storage:
     upload-dir: ${ZHIYI_UPLOAD_DIR:${user.dir}/uploads}
-  demo:
-    seed-enabled: ${ZHIYI_DEMO_SEED_ENABLED:true}
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

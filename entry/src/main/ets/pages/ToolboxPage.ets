@@ -33,7 +33,7 @@ struct ToolboxPage {
         Text('连接与扩展').fontSize(13).fontColor($r('app.color.text_secondary')).width('100%')
         Column({ space: 10 }) {
           Text('服务器地址').fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.text_primary'))
-          TextInput({ placeholder: 'http://127.0.0.1:8080', text: this.serverUrl })
+          TextInput({ placeholder: 'http://server-host:8080', text: this.serverUrl })
             .width('100%').height(48).padding({ left: 14, right: 14 }).fontSize(14).backgroundColor($r('app.color.app_background'))
             .borderRadius(12).onChange((value: string) => { this.serverUrl = value; })
           Button('保存').width('100%').height(44).fontSize(15).fontColor($r('app.color.on_primary'))

@@ -214,7 +214,11 @@ HarmonyOS client
 
 External API keys remain on the server rather than in the HarmonyOS application.
 
-> **Important:** the repository is intended for local development and learning. Before exposing a deployment to the public internet, replace all demo credentials/secrets, disable demo seed data, review media-access permissions, and perform a dedicated security review.
+> **Important:** the repository is intended for local development and learning.
+> It has no default database password, JWT secret, or seeded user accounts, and
+> it listens on loopback by default. Before allowing network access, provide
+> secrets through the environment, review media permissions, and perform a
+> dedicated deployment security review.
 
 ---
 
@@ -323,7 +327,9 @@ cd server
 mvn spring-boot:run "-Dspring-boot.run.profiles=demo"
 ```
 
-The backend runs locally on port `8080`.
+Before starting, provide `ZHIYI_JWT_SECRET` through the environment using a
+random value of at least 32 characters. The backend listens only on
+`127.0.0.1:8080` by default.
 
 Swagger UI:
 
@@ -331,7 +337,9 @@ Swagger UI:
 http://localhost:8080/swagger-ui.html
 ```
 
-The demo profile uses a local H2 database and is intended only for local development/testing.
+The demo profile uses a local H2 database and is intended only for local
+development/testing. It does not create default users or passwords; register a
+test account through the client or API.
 
 ### 3. Start with MySQL
 
