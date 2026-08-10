@@ -1,142 +1,263 @@
-# Date · 植忆 🌱
+<p align="center">
+  <img src="assets/hero.png" alt="Date project preview" width="100%" />
+</p>
 
-> **Let memories grow.**
+<h1 align="center">Date</h1>
 
-Date (植忆) is an open-source HarmonyOS application for preserving everyday memories in a more meaningful and human way.
-
-Instead of treating memories as isolated posts in an endless feed, Date turns them into something that can grow over time. Text, photos, moods, people, and moments become part of a living memory tree — a personal space for remembering life and a shared space for preserving meaningful days with others.
-
-This project started as a creative idea from a group of university students. What began as a course project gradually became something we wanted to continue building beyond the classroom.
-
-We are still learning, experimenting, and improving Date, and we hope to grow it together with the open-source community.
-
----
-
-## ✨ Why Date?
-
-Most digital memories eventually disappear into photo galleries, chat histories, or social media timelines.
-
-We wanted to explore a different idea:
-
-**What if memories could grow instead of simply accumulating?**
-
-Date uses the metaphor of planting and growing to make recording life feel more intentional.
-
-A memory is not just another post.
-
-It becomes part of your tree.
-
-And some memories are better when they are preserved together.
+<p align="center">
+  <strong>Let memories grow.</strong><br/>
+  An open-source HarmonyOS memory platform for personal reflection, small-group co-creation, and AI-assisted recall.
+</p>
 
 ---
 
-## 🌿 Features
+## Overview
 
-### 🌳 Memory Tree
+**Date** is an open-source project that explores a simple question:
 
-Your memories gradually form a personal memory tree.
+> What if digital memories could grow, connect, and return to us — instead of disappearing into photo galleries, chat histories, and endless feeds?
 
-Instead of browsing an ordinary chronological feed, Date gives memories a visual and emotional structure that grows with you.
+Traditional note-taking tools are good at **saving** information. Date is designed around a larger loop:
 
-### 📝 Capture Everyday Moments
+**Record → Organize → Co-create → Revisit**
 
-Record a memory with:
+Users can save text, photos, moods, dates, and hours; organize memories through a dynamic **Memory Tree**; build private shared spaces through **Tree Holes** and **Common Day**; and revisit memories through AI summaries, retrieval, time capsules, audio channels, desktop cards, and other interactions.
+
+The project is open source so developers can learn from it, experiment with it, and contribute to it.
+
+> **Project status:** active student project / local development demo. It is not currently operated as a public production service.
+
+---
+
+## Feature Tour
+
+### Time Capsule
+
+Write or dictate something for your future self, seal it until a chosen time, and let the app reveal and read it when the capsule opens.
+
+### Drift Bottle
+
+A lightweight anonymous interaction where users can send a short thought into the "sea", retrieve eligible bottles, and respond with resonance while the API avoids exposing author identity.
+
+### Memory Radio
+
+Static memories are reorganized into four listenable channels, driven by time, mood, and whether a memory contains a photo. HarmonyOS Core Speech TTS turns selected memories into spoken playback.
+
+### AI-guided Image Enhancement
+
+The multimodal model does **not** directly rewrite pixels. It analyzes the selected image and generates structured parameters; a deterministic computer-vision pipeline performs the actual editing.
+
+---
+
+## Core Features
+
+### Memory Tree
+
+The Memory Tree is more than a decorative visualization. Each leaf corresponds to a real memory and acts as an interactive navigation entry.
+
+The growth engine uses:
+
+- Stable ordering by creation time and memory ID
+- A repeatable user-derived pseudo-random seed
+- Golden-angle distribution (`~2.399963 rad`)
+- Collision detection with bounded retries
+- Iterative branch growth
+- Nearest-branch attachment
+- Canvas animation and hit testing
+- Semantic styling based on mood and image presence
+
+### Rich Memory Capture
+
+A memory can include:
 
 - Text
 - Photos
 - Mood
-- Date and time
+- Date
+- Hour
+- Author and shared-space relationships
 
-Small moments are often the easiest to forget. Date is designed to make preserving them simple.
+On HarmonyOS, Photo Picker and Image Kit are used to safely decode and prepare media. Images are compressed on-device before upload; the server validates file characteristics, assigns UUID-based filenames, and stores image URLs rather than database BLOBs.
 
-### 💚 Mood Memories
+### Tree Holes
 
-Each memory can carry an emotional state.
+Tree Holes are private spaces for small groups such as close friends, couples, families, and travel companions.
 
-Over time, your memory collection becomes not only a record of **what happened**, but also a record of **how those moments felt**.
+- Creators automatically become members
+- Other users join through invitation codes
+- Membership is checked again before shared memories are read or written
+- Shared records retain author, date, hour, text, and image information
 
-### 🕳️ Tree Holes
+The goal is not to create another public social feed. It is to make shared memory spaces smaller and more intentional.
 
-Create a private shared space — a **Tree Hole (树洞)** — and invite people using an invitation code.
+### Common Day
 
-Members of a Tree Hole can preserve memories together, making it useful for:
+Common Day reorganizes memories from the same shared space by **date + hour**, producing a 0–23 hour timeline.
 
-- Close friends
-- Couples
-- Families
-- Travel companions
-- Small communities
+For example, different members can record departure, sightseeing, lunch, and the trip home at different times, allowing one day to be reconstructed from multiple perspectives.
 
-The goal is not to build another public social network.
+> Poster export for Common Day is a planned integration rather than a completed module.
 
-It is to create smaller, more meaningful spaces for shared memories.
+### Memory Summary Agent
 
-### 🕰️ Common Day
+Users can trigger an AI-generated memory card from recent memories.
 
-**Common Day (共同一天)** connects everyone's memories from the same day through an hourly timeline.
+The service:
 
-Choose a date and an hour, then see what different people were experiencing at that moment.
+1. Scans incrementally from the previous summary card
+2. Builds a chronological memory context
+3. Requests structured JSON from the model
+4. Stores the generated title, summary, emotion tags, time range, and memory count
+5. Falls back gracefully when JSON parsing or model access fails
 
-A day that might otherwise disappear becomes a shared timeline built from multiple perspectives.
+### Rememberer - Retrieval-Augmented Recall
+
+Rememberer is a RAG-style question-answering experience over memories inside a Tree Hole.
+
+The backend first verifies membership, then retrieves the **Top 5** relevant memories before asking the model to answer from that context. Sources are returned with the answer so the result remains traceable.
+
+Two retrieval routes are supported:
+
+- **Embedding available:** vector retrieval with cosine similarity
+- **Embedding unavailable:** Chinese character/bigram keyword scoring fallback
+
+The agent is explicitly constrained to answer from retrieved context and to admit when the available memories are insufficient.
+
+### AI-assisted Image Editing
+
+The editing pipeline separates **model judgment** from **pixel execution**:
+
+1. The user selects one image
+2. The client decodes and compresses it to a manageable size
+3. A multimodal model analyzes the image
+4. The model returns a structured set of enhancement parameters
+5. A deterministic CV pipeline executes contrast, brightness, denoising, sharpening, and HSL vibrance operations
+6. Invalid model output falls back to safe default parameters
+
+This design keeps the output controllable and debuggable while still letting the model adapt parameters to the image.
+
+### Memory Radio
+
+Four channels turn stored memories into listenable experiences:
+
+| Channel | Selection rule |
+|---|---|
+| Time Rewind | newest memories gradually move toward the past |
+| Sunshine Radio | positive moods such as happiness and excitement |
+| Memory Gallery | memories containing photos |
+| Midnight Tree Hole | quiet, tired, calm, or low moods |
+
+HarmonyOS Core Speech TTS reads the generated narration and memory content, while lifecycle callbacks keep playback state synchronized with the UI.
+
+### Time Capsule
+
+Time Capsule combines native voice capabilities with server-side time validation:
+
+- Core Speech Kit supports real-time speech-to-text input
+- Recognized text remains editable
+- `openAt` is checked against server time
+- Early opening is rejected by the backend
+- Opening triggers a Canvas flower animation before speech playback
+- Recognition, timers, and TTS are stopped when the page exits
+
+### Drift Bottle
+
+Drift Bottle explores anonymous social interaction with backend-enforced limits and database constraints.
+
+The current design includes:
+
+- 3-day validity
+- Daily send/retrieve limits
+- Exclusion of the user's own, already-retrieved, and expired bottles
+- One resonance per user per bottle
+- Anonymous response DTOs that do not expose the author identity
+- Database uniqueness constraints to prevent duplicate actions
+
+### HarmonyOS Desktop Card
+
+Form Kit allows recent photo memories to appear outside the app:
+
+- Recent photos are prepared in the application sandbox
+- Data is cached for synchronous first render
+- Image file descriptors are passed through `FormBindingData`
+- The card displays a 2×2 recent-photo layout
+- `updateForm` refreshes content
+- Card actions can route the user back into the main app
+
+### Image-to-Draft Writing
+
+The user can choose an image and time, then ask the model to generate an editable first-person memory draft.
+
+The client never stores the external model API key. The backend acts as the proxy, validates the request, sends only the selected image/context, and returns a draft that the user can edit before publishing.
 
 ---
 
-## 📱 Screenshots
+## Privacy & Security Design
 
-> Screenshots and demo videos are coming soon.
+Date deals with personal memories, so privacy boundaries are part of the architecture rather than a UI-only concern.
 
-<!--
-You can later place screenshots in an assets folder:
+The project uses multiple layers of isolation:
 
-<p align="center">
-  <img src="assets/home.png" width="220" />
-  <img src="assets/tree.png" width="220" />
-  <img src="assets/common-day.png" width="220" />
-</p>
--->
+1. **Client session** — token stored through Preferences and attached to requests
+2. **Spring Security** — JWT authentication restores the current identity
+3. **Service authorization** — ownership, Tree Hole membership, and creator roles are checked server-side
+4. **Database constraints** — foreign keys and uniqueness constraints protect consistency
 
----
-
-## 🏗️ Architecture
-
-Date currently consists of two main parts:
+For AI calls, the intended architecture is:
 
 ```text
-Date/
-├── AppScope/                 # HarmonyOS application resources
-├── entry/                    # HarmonyOS client
-│   └── src/main/ets/
-│       ├── components/
-│       ├── constants/
-│       ├── models/
-│       ├── pages/
-│       ├── repositories/
-│       ├── services/
-│       └── viewmodels/
-│
-└── server/                   # Backend service
-    ├── scripts/
-    ├── src/
-    └── pom.xml
+HarmonyOS client
+      -> Spring Boot backend
+      -> permission check + limited context
+      -> external AI service
 ```
 
-The client follows a structured separation between UI pages, view models, repositories, services, and data models.
+External API keys remain on the server rather than in the HarmonyOS application.
 
-The backend provides authentication, memory storage, image uploads, shared Tree Holes, and Common Day APIs.
+> **Important:** the repository is intended for local development and learning. Before exposing a deployment to the public internet, replace all demo credentials/secrets, disable demo seed data, review media-access permissions, and perform a dedicated security review.
 
 ---
 
-## 🛠️ Tech Stack
+## Architecture
 
-### HarmonyOS Client
+```mermaid
+flowchart LR
+    A[HarmonyOS Client<br/>ArkTS + ArkUI + Stage] -->|REST JSON / multipart| B[Spring Boot 3.5<br/>Java 21]
+    B --> C[(MySQL 8<br/>JPA + Flyway)]
+    B --> D[Image Storage<br/>URL stored in memories]
+    B --> E[External AI Services<br/>Chat / Embedding / Multimodal]
+
+    A1[Page / Component] --> A2[ViewModel]
+    A2 --> A3[Repository]
+    A3 --> A4[HttpClient]
+
+    B1[Controller] --> B2[Service]
+    B2 --> B3[JPA Repository]
+```
+
+### HarmonyOS native capabilities
+
+- Photo Picker
+- Image Kit
+- Canvas
+- Core Speech Kit
+- Notification Kit
+- Form Kit
+- Preferences
+- Ability lifecycle APIs
+
+---
+
+## Tech Stack
+
+### Client
 
 - HarmonyOS
 - ArkTS
 - ArkUI
+- Stage model
 - DevEco Studio
-- HTTP-based backend communication
-- Local token storage
-- HarmonyOS image picker
+- REST / multipart HTTP communication
 
 ### Backend
 
@@ -145,49 +266,64 @@ The backend provides authentication, memory storage, image uploads, shared Tree 
 - Spring Security
 - JWT authentication
 - Spring Data JPA
-- MySQL 8
 - Flyway
-- H2 for local demo/testing
-- OpenAPI / Swagger
 - Maven
+
+### Data & AI
+
+- MySQL 8
+- Local H2 demo/testing profile
+- File-based image storage
+- External chat / embedding / multimodal AI services through the backend
 
 ---
 
-## 🚀 Getting Started
+## Repository Structure
 
-### 1. Clone the repository
-
-```bash
-git clone https://<repository-url>/Date.git
-cd Date
+```text
+Date/
+|-- AppScope/                 # HarmonyOS app-level resources
+|-- entry/                    # HarmonyOS client
+|   `-- src/main/ets/
+|       |-- components/
+|       |-- constants/
+|       |-- models/
+|       |-- pages/
+|       |-- repositories/
+|       |-- services/
+|       `-- viewmodels/
+|-- server/                   # Spring Boot backend
+|   |-- scripts/
+|   |-- src/main/
+|   |-- src/test/
+|   `-- pom.xml
+`-- assets/                   # Public README artwork only
 ```
 
 ---
 
-## 🖥️ Backend Setup
+## Getting Started
 
-### Requirements
+### 1. Clone your fork or repository
 
-Make sure you have:
+```bash
+git clone <repository-url>
+cd Date
+```
+
+### 2. Start the backend - quick local demo
+
+Requirements:
 
 - Java 21
 - Maven 3.9+
-- MySQL 8
-
-### Option A — Quick local demo
-
-The backend provides a demo profile using a local H2 database:
 
 ```bash
 cd server
 mvn spring-boot:run "-Dspring-boot.run.profiles=demo"
 ```
 
-The API will run on:
-
-```text
-http://localhost:8080
-```
+The backend runs locally on port `8080`.
 
 Swagger UI:
 
@@ -195,15 +331,23 @@ Swagger UI:
 http://localhost:8080/swagger-ui.html
 ```
 
-### Option B — MySQL
+The demo profile uses a local H2 database and is intended only for local development/testing.
 
-Create the local database using:
+### 3. Start with MySQL
+
+Requirements:
+
+- MySQL 8
+- Java 21
+- Maven 3.9+
+
+Initialize your local database using:
 
 ```text
 server/scripts/create-local-db.sql
 ```
 
-Then configure the following environment variables:
+Set environment variables using your own values:
 
 ```text
 ZHIYI_DB_URL
@@ -212,95 +356,28 @@ ZHIYI_DB_PASSWORD
 ZHIYI_JWT_SECRET
 ```
 
-Example:
-
-```powershell
-$env:ZHIYI_DB_URL='jdbc:mysql://127.0.0.1:3306/zhiyi?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai'
-$env:ZHIYI_DB_USERNAME='zhiyi_app'
-$env:ZHIYI_DB_PASSWORD='your-password'
-$env:ZHIYI_JWT_SECRET='your-secure-random-secret'
-```
-
-Start the backend:
+Then run:
 
 ```bash
+cd server
 mvn spring-boot:run
 ```
 
-Flyway will automatically initialize the database schema.
+Flyway manages database migrations automatically.
+
+### 4. Run the HarmonyOS client
+
+1. Open the repository in **DevEco Studio**.
+2. Start the backend.
+3. Make sure the phone/emulator can reach the backend.
+4. Configure the server address through the project's API configuration/local server settings.
+5. Build and run the `entry` module.
+
+For physical-device testing, the phone and development computer normally need to be on the same reachable network unless you use another local networking setup.
 
 ---
 
-## 📱 HarmonyOS Client Setup
-
-1. Open the project in **DevEco Studio**.
-2. Configure HarmonyOS signing if required.
-3. Start the backend.
-4. Configure the backend endpoint in:
-
-```text
-entry/src/main/ets/constants/ApiConfig.ets
-```
-
-For physical-device debugging, make sure your computer and HarmonyOS device are connected to the same network.
-
-Set the backend URL to your computer's local IP, for example:
-
-```text
-http://192.168.x.x:8080
-```
-
-Then build and run the `entry` module on your HarmonyOS device or emulator.
-
----
-
-## 🔌 Main API Areas
-
-The backend currently provides APIs for:
-
-### Authentication
-
-```text
-POST /api/auth/register
-POST /api/auth/login
-GET  /api<REDACTED_LOCAL_PATH>
-```
-
-### Memories
-
-```text
-GET    /api/memories
-POST   /api/memories
-GET    /api/memories/{id}
-PATCH  /api/memories/{id}
-DELETE /api/memories/{id}
-```
-
-### Images
-
-```text
-POST /api/files/images
-```
-
-### Tree Holes
-
-```text
-POST /api/tree-holes
-GET  /api/tree-holes
-POST /api/tree-holes/join
-```
-
-### Shared Memories
-
-```text
-GET /api/tree-holes/{id}/members
-GET /api/tree-holes/{id}/memories
-GET /api/tree-holes/{id}/common-day?date=YYYY-MM-DD
-```
-
----
-
-## 🧪 Testing
+## Tests
 
 Backend tests can be run with:
 
@@ -309,128 +386,92 @@ cd server
 mvn test
 ```
 
-The current test suite covers several important flows including authentication protection, registration conflicts, Tree Hole invitation behavior, member isolation, and Common Day queries.
+The test setup uses an isolated H2 database and covers important flows such as authentication protection, registration conflicts, invitation-based Tree Hole joining, member isolation, and Common Day queries.
 
 ---
 
-## 🎓 Our Story
+## Engineering Highlights
 
-Date started as a university course project.
+This project is also an engineering experiment in combining deterministic software systems with AI-assisted behavior.
 
-We are students, and the original goal was simply to turn an idea into a working application.
-
-But while building it, we became interested in a larger question:
-
-> How can software help people preserve ordinary moments without turning those moments into content for a public social feed?
-
-That question became the foundation of Date.
-
-Although the course gave us the reason to start, we do not want the project to end with the course.
-
-We are open-sourcing Date because we want to keep learning, improve the engineering behind it, and allow other developers to experiment with the idea as well.
-
-We hope Date can become both a useful application and an approachable reference project for developers interested in building human-centered experiences on HarmonyOS.
+- **Memory visualization:** deterministic growth logic rather than random decoration
+- **Authorization:** identity + resource-level membership/ownership checks
+- **Media pipeline:** temporary URI → decode → compress → multipart → validation → URL persistence
+- **RAG fallback:** embeddings when available, keyword scoring when not
+- **AI output boundaries:** structured JSON, context limitations, parser fallbacks
+- **Image editing:** model selects parameters; deterministic CV performs edits
+- **Lifecycle correctness:** speech, timers, and playback stop when the page exits
+- **Native HarmonyOS integration:** speech, cards, notifications, media, Canvas, and app lifecycle
 
 ---
 
-## 🤖 Building with Codex
+## Project Motivation
 
-As student developers, our time, experience, and development resources are limited.
+Digital memories are easy to save but surprisingly difficult to organize, rediscover, and preserve together with other people. Date explores ways to make those memories easier to understand, revisit, and share intentionally.
 
-We hope to use Codex to help us continue developing Date beyond its original course-project scope — including:
+By keeping Date open source, we aim to make the project easier to understand, test, extend, and maintain while learning from other developers.
 
-- Refactoring and improving the existing codebase
-- Finding and fixing bugs
-- Expanding automated tests
-- Improving API and project documentation
-- Reviewing frontend/backend changes
-- Improving architecture and maintainability
-- Exploring new memory interaction ideas
-- Making the project easier for new contributors to understand
+We are especially interested in using modern coding tools such as Codex to help us:
 
-Our goal is not simply to use AI to generate more code.
-
-We want to use Codex as a tool to help us learn better software engineering practices while turning a student prototype into a more reliable and sustainable open-source project.
+- Refactor and understand a growing codebase
+- Find and fix bugs
+- Expand automated tests
+- Improve documentation
+- Review frontend/backend changes
+- Make issues easier for new contributors to approach
+- Learn better software-engineering practices while continuing the project
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-Date is still at an early stage.
+The course version established a broad functional prototype. The next stage is about making it more reliable and sustainable.
 
-Some areas we would like to explore next include:
-
-- [ ] Improve Memory Tree visualization
-- [ ] Better photo and media experiences
-- [ ] Memory search and filtering
-- [ ] Memory tags
-- [ ] More expressive mood visualization
-- [ ] Better Common Day interactions
-- [ ] Notifications and memory reminders
-- [ ] Improved privacy controls
-- [ ] Data export and backup
-- [ ] More automated tests
-- [ ] CI/CD
-- [ ] Better documentation
-- [ ] Internationalization
-- [ ] Accessibility improvements
-
-Ideas and contributions are welcome.
+- [ ] Strengthen privacy and security review
+- [ ] Add a local privacy lock
+- [ ] Improve offline behavior
+- [ ] Improve upload reliability / resumable media transfer
+- [ ] Expand automated test coverage
+- [ ] Add CI/CD
+- [ ] Improve Memory Tree interaction and visualization
+- [ ] Finish Common Day poster export
+- [ ] Add anniversary reminders
+- [ ] Add monthly memory summaries
+- [ ] Improve personalization
+- [ ] Improve accessibility
+- [ ] Add internationalization
+- [ ] Improve contributor documentation
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Date is a student-led project, and contributions of all sizes are welcome.
+Contributions are welcome, including from other students and first-time open-source contributors.
 
-You can help by:
+Useful ways to contribute include:
 
-- Reporting bugs
-- Suggesting features
-- Improving documentation
-- Improving UI/UX
-- Adding tests
-- Refactoring code
-- Improving accessibility
-- Opening pull requests
+- Report a bug
+- Suggest a feature
+- Improve documentation
+- Add tests
+- Improve UI/UX
+- Refactor a module
+- Improve accessibility
+- Review security/privacy behavior
+- Open a pull request
 
-If you are interested in contributing, feel free to open an Issue first to discuss your idea.
-
-We are learning too, so beginners are welcome.
-
----
-
-## 🌱 Project Philosophy
-
-Date is built around a simple belief:
-
-> **Not every meaningful moment needs an audience. Some moments simply deserve to be remembered.**
-
-We want to build technology that helps people preserve those moments — privately, intentionally, and sometimes together.
+For larger changes, opening an Issue first is recommended so the design can be discussed before implementation.
 
 ---
 
-## ⭐ Support
+## License
 
-If you find Date interesting, consider giving the repository a star.
-
-It helps us know that this idea is worth continuing.
-
-Contributions, suggestions, and discussions are equally appreciated.
-
----
-
-## 📄 License
-
-Date is open-source software licensed under the **MIT License**.
-
-Copyright © 2026 Date Contributors.
-
-You are free to use, modify, and distribute this project under the terms of the MIT License.
+This repository is released under the **MIT License**. See [`LICENSE`](LICENSE).
 
 ---
 
 <p align="center">
-  <b>Date · 植忆</b><br/>
-  Let memories grow. 🌱
+  <strong>Date</strong><br/>
+  Not every meaningful moment needs an audience.<br/>
+  Some moments simply deserve to be remembered.
 </p>
