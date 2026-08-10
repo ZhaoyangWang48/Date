@@ -422,7 +422,11 @@ Contributions, suggestions, and discussions are equally appreciated.
 
 ## 📄 License
 
-A formal open-source license will be added soon.
+Date is open-source software licensed under the **MIT License**.
+
+Copyright © 2026 Date Contributors.
+
+You are free to use, modify, and distribute this project under the terms of the MIT License.
 
 ---
 
