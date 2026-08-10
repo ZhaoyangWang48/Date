@@ -1,3 +1,5 @@
+<a id="top"></a>
+
 <p align="center">
   <img src="assets/hero.png" alt="Date project preview" width="100%" />
 </p>
@@ -9,9 +11,22 @@
   An open-source HarmonyOS memory platform for personal reflection, small-group co-creation, and AI-assisted recall.
 </p>
 
+<p align="center">
+  <a href="#overview">Overview</a> ·
+  <a href="#feature-tour">Feature Tour</a> ·
+  <a href="#core-features">Core Features</a> ·
+  <a href="#privacy-security">Privacy &amp; Security</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#tech-stack">Tech Stack</a> ·
+  <a href="#getting-started">Getting Started</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
+
 ---
 
-## Overview
+<a id="overview"></a>
+
+## 🌿 Overview
 
 **Date** is an open-source project that explores a simple question:
 
@@ -19,7 +34,9 @@
 
 Traditional note-taking tools are good at **saving** information. Date is designed around a larger loop:
 
-**Record → Organize → Co-create → Revisit**
+<p align="center">
+  <strong>Record → Organize → Co-create → Revisit</strong>
+</p>
 
 Users can save text, photos, moods, dates, and hours; organize memories through a dynamic **Memory Tree**; build private shared spaces through **Tree Holes** and **Common Day**; and revisit memories through AI summaries, retrieval, time capsules, audio channels, desktop cards, and other interactions.
 
@@ -29,29 +46,33 @@ The project is open source so developers can learn from it, experiment with it, 
 
 ---
 
-## Feature Tour
+<a id="feature-tour"></a>
 
-### Time Capsule
+## ✨ Feature Tour
+
+### ⏳ Time Capsule
 
 Write or dictate something for your future self, seal it until a chosen time, and let the app reveal and read it when the capsule opens.
 
-### Drift Bottle
+### 🌊 Drift Bottle
 
 A lightweight anonymous interaction where users can send a short thought into the "sea", retrieve eligible bottles, and respond with resonance while the API avoids exposing author identity.
 
-### Memory Radio
+### 🎙️ Memory Radio
 
 Static memories are reorganized into four listenable channels, driven by time, mood, and whether a memory contains a photo. HarmonyOS Core Speech TTS turns selected memories into spoken playback.
 
-### AI-guided Image Enhancement
+### 🌈 AI-guided Image Enhancement
 
 The multimodal model does **not** directly rewrite pixels. It analyzes the selected image and generates structured parameters; a deterministic computer-vision pipeline performs the actual editing.
 
 ---
 
-## Core Features
+<a id="core-features"></a>
 
-### Memory Tree
+## 🧩 Core Features
+
+### 🌳 Memory Tree
 
 The Memory Tree is more than a decorative visualization. Each leaf corresponds to a real memory and acts as an interactive navigation entry.
 
@@ -66,7 +87,7 @@ The growth engine uses:
 - Canvas animation and hit testing
 - Semantic styling based on mood and image presence
 
-### Rich Memory Capture
+### 📝 Rich Memory Capture
 
 A memory can include:
 
@@ -79,7 +100,7 @@ A memory can include:
 
 On HarmonyOS, Photo Picker and Image Kit are used to safely decode and prepare media. Images are compressed on-device before upload; the server validates file characteristics, assigns UUID-based filenames, and stores image URLs rather than database BLOBs.
 
-### Tree Holes
+### 🕳️ Tree Holes
 
 Tree Holes are private spaces for small groups such as close friends, couples, families, and travel companions.
 
@@ -90,7 +111,7 @@ Tree Holes are private spaces for small groups such as close friends, couples, f
 
 The goal is not to create another public social feed. It is to make shared memory spaces smaller and more intentional.
 
-### Common Day
+### 🕰️ Common Day
 
 Common Day reorganizes memories from the same shared space by **date + hour**, producing a 0–23 hour timeline.
 
@@ -98,7 +119,7 @@ For example, different members can record departure, sightseeing, lunch, and the
 
 > Poster export for Common Day is a planned integration rather than a completed module.
 
-### Memory Summary Agent
+### ✨ Memory Summary Agent
 
 Users can trigger an AI-generated memory card from recent memories.
 
@@ -110,7 +131,7 @@ The service:
 4. Stores the generated title, summary, emotion tags, time range, and memory count
 5. Falls back gracefully when JSON parsing or model access fails
 
-### Rememberer - Retrieval-Augmented Recall
+### 🔎 Rememberer - Retrieval-Augmented Recall
 
 Rememberer is a RAG-style question-answering experience over memories inside a Tree Hole.
 
@@ -123,7 +144,7 @@ Two retrieval routes are supported:
 
 The agent is explicitly constrained to answer from retrieved context and to admit when the available memories are insufficient.
 
-### AI-assisted Image Editing
+### 🎨 AI-assisted Image Editing
 
 The editing pipeline separates **model judgment** from **pixel execution**:
 
@@ -136,7 +157,7 @@ The editing pipeline separates **model judgment** from **pixel execution**:
 
 This design keeps the output controllable and debuggable while still letting the model adapt parameters to the image.
 
-### Memory Radio
+### 🎙️ Memory Radio
 
 Four channels turn stored memories into listenable experiences:
 
@@ -149,7 +170,7 @@ Four channels turn stored memories into listenable experiences:
 
 HarmonyOS Core Speech TTS reads the generated narration and memory content, while lifecycle callbacks keep playback state synchronized with the UI.
 
-### Time Capsule
+### ⏳ Time Capsule
 
 Time Capsule combines native voice capabilities with server-side time validation:
 
@@ -160,7 +181,7 @@ Time Capsule combines native voice capabilities with server-side time validation
 - Opening triggers a Canvas flower animation before speech playback
 - Recognition, timers, and TTS are stopped when the page exits
 
-### Drift Bottle
+### 🌊 Drift Bottle
 
 Drift Bottle explores anonymous social interaction with backend-enforced limits and database constraints.
 
@@ -173,7 +194,7 @@ The current design includes:
 - Anonymous response DTOs that do not expose the author identity
 - Database uniqueness constraints to prevent duplicate actions
 
-### HarmonyOS Desktop Card
+### 🧩 HarmonyOS Desktop Card
 
 Form Kit allows recent photo memories to appear outside the app:
 
@@ -184,7 +205,7 @@ Form Kit allows recent photo memories to appear outside the app:
 - `updateForm` refreshes content
 - Card actions can route the user back into the main app
 
-### Image-to-Draft Writing
+### 🖼️ Image-to-Draft Writing
 
 The user can choose an image and time, then ask the model to generate an editable first-person memory draft.
 
@@ -192,7 +213,9 @@ The client never stores the external model API key. The backend acts as the prox
 
 ---
 
-## Privacy & Security Design
+<a id="privacy-security"></a>
+
+## 🔒 Privacy & Security Design
 
 Date deals with personal memories, so privacy boundaries are part of the architecture rather than a UI-only concern.
 
@@ -222,7 +245,9 @@ External API keys remain on the server rather than in the HarmonyOS application.
 
 ---
 
-## Architecture
+<a id="architecture"></a>
+
+## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
@@ -239,7 +264,7 @@ flowchart LR
     B2 --> B3[JPA Repository]
 ```
 
-### HarmonyOS native capabilities
+### 📱 HarmonyOS native capabilities
 
 - Photo Picker
 - Image Kit
@@ -252,9 +277,11 @@ flowchart LR
 
 ---
 
-## Tech Stack
+<a id="tech-stack"></a>
 
-### Client
+## 🛠️ Tech Stack
+
+### 📱 Client
 
 - HarmonyOS
 - ArkTS
@@ -263,7 +290,7 @@ flowchart LR
 - DevEco Studio
 - REST / multipart HTTP communication
 
-### Backend
+### ☕ Backend
 
 - Java 21
 - Spring Boot 3.5
@@ -273,7 +300,7 @@ flowchart LR
 - Flyway
 - Maven
 
-### Data & AI
+### 🧠 Data & AI
 
 - MySQL 8
 - Local H2 demo/testing profile
@@ -282,7 +309,7 @@ flowchart LR
 
 ---
 
-## Repository Structure
+## 🗂️ Repository Structure
 
 ```text
 Date/
@@ -306,7 +333,9 @@ Date/
 
 ---
 
-## Getting Started
+<a id="getting-started"></a>
+
+## 🚀 Getting Started
 
 ### 1. Clone your fork or repository
 
@@ -385,7 +414,7 @@ For physical-device testing, the phone and development computer normally need to
 
 ---
 
-## Tests
+## ✅ Tests
 
 Backend tests can be run with:
 
@@ -398,7 +427,7 @@ The test setup uses an isolated H2 database and covers important flows such as a
 
 ---
 
-## Engineering Highlights
+## 💡 Engineering Highlights
 
 This project is also an engineering experiment in combining deterministic software systems with AI-assisted behavior.
 
@@ -413,7 +442,7 @@ This project is also an engineering experiment in combining deterministic softwa
 
 ---
 
-## Project Motivation
+## 🌱 Project Motivation
 
 Digital memories are easy to save but surprisingly difficult to organize, rediscover, and preserve together with other people. Date explores ways to make those memories easier to understand, revisit, and share intentionally.
 
@@ -431,7 +460,7 @@ We are especially interested in using modern coding tools such as Codex to help 
 
 ---
 
-## Roadmap
+## 🗺️ Roadmap
 
 The course version established a broad functional prototype. The next stage is about making it more reliable and sustainable.
 
@@ -452,7 +481,9 @@ The course version established a broad functional prototype. The next stage is a
 
 ---
 
-## Contributing
+<a id="contributing"></a>
+
+## 🤝 Contributing
 
 Contributions are welcome, including from other students and first-time open-source contributors.
 
@@ -472,7 +503,7 @@ For larger changes, opening an Issue first is recommended so the design can be d
 
 ---
 
-## License
+## 📄 License
 
 This repository is released under the **MIT License**. See [`LICENSE`](LICENSE).
 
@@ -483,3 +514,5 @@ This repository is released under the **MIT License**. See [`LICENSE`](LICENSE).
   Not every meaningful moment needs an audience.<br/>
   Some moments simply deserve to be remembered.
 </p>
+
+<p align="center"><a href="#top">Back to top ↑</a></p>
